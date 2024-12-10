@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useReducer } from 'react'
-import { authenticate } from '../actions/auth'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { authenticate, login } from '../actions/auth'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,15 +18,34 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+// Define the schema using Zod
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
+
 export default function LoginPage() {
   const [errorMessage, dispatch] = useReducer((state: string | undefined, action: string) => action, undefined)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (formData: FormData) => {
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  })
+
+  const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true)
     try {
-      const result = await authenticate(errorMessage, formData)
-      dispatch(result)
+      const result = await login(data.email, data.password)
+      if (result === 'Success') {
+        //navigate to dashboard
+        
+
+      } else {
+        dispatch(result)
+
+      }
     } catch (error) {
       dispatch("Something went wrong")
     }
@@ -37,16 +59,18 @@ export default function LoginPage() {
           <CardTitle>Login</CardTitle>
           <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
-        <form action={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="Enter your email" required />
+                <Input id="email" {...register("email")} type="email" placeholder="Enter your email" required />
+                {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
               </div>
               <div className="flex flex-col space-y-1.5">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder="Enter your password" required />
+                <Input id="password" {...register("password")} type="password" placeholder="Enter your password" required />
+                {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
               </div>
             </div>
           </CardContent>
@@ -63,4 +87,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
