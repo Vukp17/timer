@@ -39,6 +39,7 @@ export default function ClientManagement() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentClient, setCurrentClient] = useState<Client | null>(null)
+    
     const { toast } = useToast()
 
     const handleCreateClient = async (data: Record<string, string>) => {
@@ -83,6 +84,33 @@ export default function ClientManagement() {
             description: `${currentClient.name} has been deleted.`,
         })
     }
+    const handleSearch  = (query: string) => {
+        getClientList(query).then((data) => {
+            if (data !== undefined) {
+                setClients(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+    }
+    const handleSort = (column: string, direction: string) => {
+        getClientList(column, direction).then((data) => {
+            if (data !== undefined) {
+                setClients(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }
+        ).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+    }
     useEffect(() => {
         // fetch clients
         getClientList().then((data) => {
@@ -119,6 +147,8 @@ return (
                 setCurrentClient(client)
                 setIsDeleteModalOpen(true)
             }}
+            onSearch={handleSearch}
+
         />
         <CrudModal
             isOpen={isCreateModalOpen}

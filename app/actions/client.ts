@@ -1,12 +1,16 @@
-import exp from "constants";
 import { Client, ClientCreate } from "../models/client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const VIEW = '/client';
 
-export async function getClientList(): Promise<Client[]> {
+export async function getClientList(searchQuery?: string,sortOrder?:string,sortField?:string): Promise<Client[]> {
     try {
-        const response = await fetch(API_URL + VIEW, {
+        const url = new URL(API_URL + VIEW);
+        if (searchQuery) {
+            url.searchParams.append('search', searchQuery);
+        }
+
+        const response = await fetch(url.toString(), {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -77,7 +81,6 @@ export async function update(client: Client): Promise<Client> {
         throw error;
     }
 }
-
 
 export async function remove(client: Client): Promise<void> {
     try {

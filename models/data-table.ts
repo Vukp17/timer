@@ -8,4 +8,7 @@ export interface Column<T> {
     columns: Column<T>[]
     onEdit: (item: T) => void
     onDelete: (item: T) => void
+    onSearch?: (term: string) => void; // New prop for search callback
+    onSort?: (column: string, order: 'asc' | 'desc') => void
+
   }
