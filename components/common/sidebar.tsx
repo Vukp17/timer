@@ -39,7 +39,6 @@ export function Sidebar() {
                 isCollapsed ? "w-16" : "w-64"
             )}>
                 <div className="flex h-16 items-center justify-between">
-                    {!isCollapsed && <h1 className="text-2xl font-bold">Time track</h1>}
                     <Button
                         variant="ghost"
                         size="icon"
