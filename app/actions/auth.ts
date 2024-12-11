@@ -31,31 +31,31 @@ export async function authenticate(
     }
 }
 
-export async function login(email: string, password: string): Promise<AuthError> {
+export async function login(email: string, password: string): Promise<{ status: AuthError, token?: string }> {
     try {
-        const res =  await  fetch('http://localhost:4000/auth/login', {
+        const res = await fetch('http://localhost:4000/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
-        })
+        });
 
-        if(res.ok){
-            return 'Success'
-
-        }else{
-            return 'Invalid credentials'
+        if (res.ok) {
+            const data = await res.json();
+            console.log(data)
+            return { status: 'Success', token: data.access_token };
+        } else {
+            return { status: 'Invalid credentials' };
         }
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error) {
                 case 'CredentialsSignin':
-                    return 'Invalid credentials'
+                    return { status: 'Invalid credentials' };
                 default:
-                    return 'Something went wrong'
+                    return { status: 'Something went wrong' };
             }
         }
-        throw error
-
+        throw error;
     }
 }
 export async function reg(email: string, password: string,username:string): Promise<AuthError> {

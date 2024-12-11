@@ -1,11 +1,16 @@
-import { Layout } from "@/components/common/layout"
-import { TimeTracker } from "@/components/common/time-tracker"
+// pages/time-tracker.tsx
+"use client";
 
-export default function TimeTrackerPage() {
+import { Layout } from "@/components/common/layout";
+import { TimeTracker } from "@/components/common/time-tracker";
+import withAuth from "@/components/auth/withAuth";
+
+function TimeTrackerPage() {
   return (
     <Layout>
       <TimeTracker />
     </Layout>
-  )
+  );
 }
 
+export default withAuth(TimeTrackerPage);

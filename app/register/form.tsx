@@ -42,22 +42,22 @@ export default function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <Label htmlFor="username">Username</Label>
-        <Input id="username" {...register("username")} />
-        {errors.username && <p className="text-red-600 text-sm">{errors.username.message}</p>}
-      </div>
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" {...register("email")} />
-        {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
-      </div>
-      <div>
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" {...register("password")} />
-        {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
-      </div>
-      <Button type="submit">Register</Button>
-    </form>
+    <div className="space-y-2">
+      <Label htmlFor="username">Username</Label>
+      <Input id="username" {...register("username")} />
+      {errors.username && <p className="text-red-600 text-sm">{errors.username.message}</p>}
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="email">Email</Label>
+      <Input id="email" type="email" {...register("email")} />
+      {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="password">Password</Label>
+      <Input id="password" type="password" {...register("password")} />
+      {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
+    </div>
+    <Button type="submit" className="w-full">Register</Button>
+  </form>
   );
 }

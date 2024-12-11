@@ -1,12 +1,11 @@
-'use client'
-
-import { useState } from 'react'
-import { useReducer } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { authenticate, login } from '../actions/auth'
-import { Button } from "@/components/ui/button"
+"use client"
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { login } from '../actions/auth';
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,43 +13,42 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Define the schema using Zod
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
-})
+});
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const [errorMessage, dispatch] = useReducer((state: string | undefined, action: string) => action, undefined)
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-  })
+  });
 
   const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const result = await login(data.email, data.password)
-      if (result === 'Success') {
-        //navigate to dashboard
-        
-
+      const result = await login(data.email, data.password);
+      if (result.status === 'Success' && result.token) {
+        localStorage.setItem('token', result.token);
+        router.push('/tracker');
       } else {
-        dispatch(result)
-
+        setErrorMessage(result.status);
       }
     } catch (error) {
-      dispatch("Something went wrong")
+      setErrorMessage("Something went wrong");
     }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -85,5 +83,5 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }
