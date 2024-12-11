@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Clock, Settings, ChevronRight, User, Briefcase } from 'lucide-react'
+import { Home, Clock, Folder, ChevronRight, User, Briefcase } from 'lucide-react'
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,8 @@ import {
 
 const navItems = [
     { icon: Clock, label: 'Time Tracker', href: '/tracker' },
+    { icon: Briefcase, label: 'Projects', href: '/projects' },
+    { icon: Folder, label: 'Clients', href: '/clients' },
 ]
 
 export function Sidebar() {
@@ -66,9 +68,9 @@ export function Sidebar() {
                                                 isCollapsed && "justify-center"
                                             )}
                                         >
-                                            <Link href={item.href}>
-                                                <item.icon className={cn("h-4 w-4", isCollapsed ? "mr-0" : "mr-2")} />
-                                                {!isCollapsed && item.label}
+                                            <Link href={item.href} className="flex items-center">
+                                                <item.icon className="h-6 w-6" />
+                                                {!isCollapsed && <span className="ml-2">{item.label}</span>}
                                             </Link>
                                         </Button>
                                     </TooltipTrigger>
@@ -86,8 +88,8 @@ export function Sidebar() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="w-full justify-start">
-                                <User className={cn("h-4 w-4", isCollapsed ? "mr-0" : "mr-2")} />
-                                {!isCollapsed && <span>John Doe</span>}
+                                <User className="h-6 w-6" />
+                                {!isCollapsed && <span className="ml-2">John Doe</span>}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
@@ -101,7 +103,6 @@ export function Sidebar() {
                             <DropdownMenuItem>Log out</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-
                 </div>
             </div>
         </TooltipProvider>
