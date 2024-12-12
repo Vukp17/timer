@@ -3,11 +3,15 @@ import { Client, ClientCreate } from "../models/client";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const VIEW = '/client';
 
-export async function getClientList(searchQuery?: string,sortOrder?:string,sortField?:string): Promise<Client[]> {
+export async function getClientList(searchQuery?: string,sortField?:string,sortOrder:string = 'asc'): Promise<Client[]> {
     try {
         const url = new URL(API_URL + VIEW);
         if (searchQuery) {
             url.searchParams.append('search', searchQuery);
+        }
+        if (sortField) {
+            url.searchParams.append('sortField', sortField);
+            url.searchParams.append('sortOrder', sortOrder);
         }
 
         const response = await fetch(url.toString(), {

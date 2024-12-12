@@ -39,7 +39,8 @@ export default function ClientManagement() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentClient, setCurrentClient] = useState<Client | null>(null)
-    
+    const [searchTerm, setSearchTerm] = useState<string>('') // State for search term
+
     const { toast } = useToast()
 
     const handleCreateClient = async (data: Record<string, string>) => {
@@ -85,6 +86,7 @@ export default function ClientManagement() {
         })
     }
     const handleSearch  = (query: string) => {
+        setSearchTerm(query); // Update search term state
         getClientList(query).then((data) => {
             if (data !== undefined) {
                 setClients(data)
@@ -98,7 +100,8 @@ export default function ClientManagement() {
         })
     }
     const handleSort = (column: string, direction: string) => {
-        getClientList(column, direction).then((data) => {
+        console.log(column, direction)
+        getClientList(searchTerm,column,direction).then((data) => {
             if (data !== undefined) {
                 setClients(data)
             } else {
@@ -148,6 +151,7 @@ return (
                 setIsDeleteModalOpen(true)
             }}
             onSearch={handleSearch}
+            onSort={handleSort}
 
         />
         <CrudModal
