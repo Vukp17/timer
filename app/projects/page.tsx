@@ -8,35 +8,29 @@ import { DataTable } from "@/components/common/data-table"
 import { CrudModal } from "@/components/common/modals/crud-modal"
 import { Column } from '@/models/data-table'
 import { Layout } from '@/components/common/layout'
-import { getProjectList,createProject } from '../actions/project';
-import { Project, ProjectCreate } from '../models/project'
+import { getProjectList, createProject, updateProject, deleteProject } from '../actions/project';
+import { getAll } from '../actions/client';
 
-
+import { Project, ProjectCreate,ProjectStatus } from '../models/project'
+import { Client } from '../models/client'
 
 const projectColumns: Column<Project>[] = [
     { header: 'Name', accessorKey: 'name' },
     { header: 'Description', accessorKey: 'description' },
+    { header: 'Client', accessorKey: 'clientId' },
+    { header: 'Status', accessorKey: 'status' },
 ]
 
 const projectFields = [
     { name: 'name', label: 'Name', type: 'text' as const },
     { name: 'description', label: 'Description', type: 'textarea' as const },
-    { name: 'client', label: 'Status', type: 'select' as const, options: ['active', 'completed', 'on-hold'] },
+    { name: 'clientId', label: 'Client', type: 'select' as const, options: [] as { id: string | number; label: string }[] },
+    { name: 'status', label: 'Status', type: 'select' as const, options: [{ id: 'ACTIVE', label: 'ACTIVE' }, { id: 'INACTIVE', label: 'INACTIVE' }, { id: 'ARCHIVED', label: 'ARCHIVED' }] },
 ]
 
 export default function ProjectManagement() {
-    const [projects, setProjects] = useState<Project[]>([
-        {
-            id: 1, name: 'Website Redesign', description: 'Overhaul of company website',
-        },
-        {
-            id: 2, name: 'Mobile App Development', description: 'Create a new mobile app',
-        },
-        {
-            id: 3, name: 'Database Migration', description: 'Migrate to new database system',
-     
-        },
-    ])
+    const [projects, setProjects] = useState<Project[]>([])
+    const [clients, setClients] = useState<Client[]>([])
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -44,48 +38,17 @@ export default function ProjectManagement() {
     const { toast } = useToast()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const handleCreateProject = async (data: Record<string, string>) => {
-        const newProject: ProjectCreate = {
-            name: data.name,
-            description: data.description,
-
-        }
-        const d = await createProject(newProject)
-        setProjects([...projects, d])
-        setIsCreateModalOpen(false)
-        toast({
-            title: "Project Created",
-            description: `${newProject.name} has been added to your projects.`,
-        })
-    }
-
-    const handleEditProject = (data: Record<string, string>) => {
-        if (!currentProject) return
-        const updatedProject: Project = {
-            ...currentProject,
-            name: data.name,
-            description: data.description,
-        }
-        setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p))
-        setIsEditModalOpen(false)
-        toast({
-            title: "Project Updated",
-            description: `${updatedProject.name} has been updated.`,
-        })
-    }
-
-    const handleDeleteProject = () => {
-        if (!currentProject) return
-        setProjects(projects.filter(p => p.id !== currentProject.id))
-        setIsDeleteModalOpen(false)
-        toast({
-            title: "Project Deleted",
-            description: `${currentProject.name} has been removed from your projects.`,
-            variant: "destructive",
-        })
-    }
+    const [searchTerm, setSearchTerm] = useState<string>('') // State for search term
+    const [sortField, setSortField] = useState<string>('') // State for sort field
+    const [sortOrder, setSortOrder] = useState<string>('asc') // State for sort order
+    const [page, setPage] = useState<number>(1) // State for page number
     useEffect(() => {
-        getProjectList().then((data) => {
+        getProjectList(
+            page,
+            searchTerm,
+            sortField,
+            sortOrder,
+        ).then((data) => {
             if (data !== undefined) {
                 setProjects(data)
             } else {
@@ -97,8 +60,108 @@ export default function ProjectManagement() {
             setLoading(false)
         })
 
-    },
-        [])
+        getAll().then((data) => {
+            if (data !== undefined) {
+                setClients(data)
+                projectFields.find(field => field.name === 'clientId')!.options = data.map(client => ({ id: client.id, label: client.name }))
+            } else {
+                setError('Failed to fetch clients')
+            }
+        }).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+        })
+    }, [])
+
+    const handleCreateProject = async (data: Record<string, string>) => {
+        const newProject: ProjectCreate = {
+            name: data.name,
+            description: data.description,
+            clientId:data.clientId ?  Number(data.clientId) : undefined,
+            status: data.status as ProjectStatus,
+        }
+        const d = await createProject(newProject)
+        setProjects([...projects, d])
+        setIsCreateModalOpen(false)
+        toast({
+            title: "Project Created",
+            description: `${newProject.name} has been added to your projects.`,
+        })
+    }
+
+    const handleEditProject = async (data: Record<string, string>) => {
+        if (!currentProject) return
+        console.log(data)
+        const updatedProject: Project = {
+            ...currentProject,
+            name: data.name,
+            description: data.description,
+            clientId:data.clientId ?  Number(data.clientId) : undefined,
+            status: data.status as ProjectStatus,
+        }
+        const d = await updateProject(updatedProject)
+        setProjects(projects.map(p => p.id === d.id ? d : p))
+        setIsEditModalOpen(false)
+        toast({
+            title: "Project Updated",
+            description: `${updatedProject.name} has been updated.`,
+        })
+    }
+
+    const handleDeleteProject = async () => {
+        if (!currentProject) return
+        await deleteProject(currentProject)
+        setProjects(projects.filter(p => p.id !== currentProject.id))
+        setIsDeleteModalOpen(false)
+        toast({
+            title: "Project Deleted",
+            description: `${currentProject.name} has been removed from your projects.`,
+            variant: "destructive",
+        })
+    }
+    const handleSearch = (query: string) => {
+        setSearchTerm(query); // Update search term state
+        getProjectList(page, query).then((data) => {
+            if (data !== undefined) {
+                setProjects(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+
+    }
+    const handleSort = (column: string, direction: string) => {
+        setSortField(column)
+        setSortOrder(direction)
+        getProjectList(page, searchTerm, column, direction).then((data) => {
+            if (data !== undefined) {
+                setProjects(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }
+        ).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+    }
+   const handlePageChange = (page: number) => {
+        getProjectList(page, searchTerm, sortField, sortOrder,).then((data) => {
+            if (data !== undefined) {
+                setProjects(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+    }
 
     return (
         <Layout>
@@ -122,6 +185,9 @@ export default function ProjectManagement() {
                         setCurrentProject(project)
                         setIsDeleteModalOpen(true)
                     }}
+                    onSearch={handleSearch}
+                    onPageChange={handlePageChange}
+                    onSort={handleSort}
                 />
 
                 <CrudModal
@@ -143,6 +209,8 @@ export default function ProjectManagement() {
                     initialData={currentProject ? {
                         name: currentProject.name,
                         description: currentProject.description || '',
+                        status: currentProject.status || 'INACTIVE',
+                        clientId: currentProject.clientId ? clients.find(client => client.id === currentProject.clientId)?.name || '' : '',
                     } : undefined}
                 />
 
@@ -156,7 +224,5 @@ export default function ProjectManagement() {
                 />
             </div>
         </Layout>
-
     )
 }
-

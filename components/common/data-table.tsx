@@ -139,7 +139,9 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
             <TableRow key={index}>
               {columns.map((column) => (
                 <TableCell key={column.accessorKey as string}>
-                  {item[column.accessorKey] as React.ReactNode}
+                  {typeof item[column.accessorKey] === 'object' && item[column.accessorKey] !== null
+                    ? (item[column.accessorKey] as any).name // Access nested object property
+                    : (item[column.accessorKey] as React.ReactNode)}
                 </TableCell>
               ))}
               <TableCell className="text-right">

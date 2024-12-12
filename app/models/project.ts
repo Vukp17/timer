@@ -1,8 +1,11 @@
+import { Client } from "./client";
+
 export interface ProjectCreate {
 
     name: string;
     description?: string;
     clientId?: number;
+    status: ProjectStatus;
 
 
 
@@ -16,4 +19,13 @@ export interface Project {
     clientId?: number;
     createdAt?: Date;
     updatedAt?: Date;
+    status?: ProjectStatus; 
+}
+
+
+export enum ProjectStatus {
+    ACTIVE = 'ACTIVE',
+    INACTIVE = 'INACTIVE',
+    ARCHIVED = 'ARCHIVED',
+
 }
