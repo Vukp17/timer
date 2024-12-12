@@ -39,7 +39,7 @@ function debounce(func: (...args: any[]) => void, wait: number) {
   };
 }
 
-export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort }: DataTableProps<T>) {
+export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort, onPageChange }: DataTableProps<T>) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -99,7 +99,14 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
     }
   }
 
-  const debouncedHandleSearch = useCallback(debounce(handleSearch, 0), [handleSearch]);
+  const handlePageChange = (newPage: number) => {
+    router.push(pathname + '?' + createQueryString('page', newPage.toString()))
+    if (onPageChange) {
+      onPageChange(newPage)
+    }
+  }
+
+  const debouncedHandleSearch = useCallback(debounce(handleSearch, 300), [handleSearch]);
 
   return (
     <div className="space-y-4">
@@ -160,6 +167,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
             <PaginationPrevious 
               href={page > 1 ? `${pathname}?${createQueryString('page', (page - 1).toString())}` : '#'}
               className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+              onClick={() => handlePageChange(page - 1)}
             />
           </PaginationItem>
           {[...Array(totalPages)].map((_, i) => (
@@ -167,6 +175,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
               <PaginationLink 
                 href={`${pathname}?${createQueryString('page', (i + 1).toString())}`}
                 isActive={page === i + 1}
+                onClick={() => handlePageChange(i + 1)}
               >
                 {i + 1}
               </PaginationLink>
@@ -176,6 +185,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
             <PaginationNext 
               href={page < totalPages ? `${pathname}?${createQueryString('page', (page + 1).toString())}` : '#'}
               className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+              onClick={() => handlePageChange(page + 1)}
             />
           </PaginationItem>
         </PaginationContent>

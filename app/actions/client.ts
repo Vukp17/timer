@@ -3,9 +3,12 @@ import { Client, ClientCreate } from "../models/client";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const VIEW = '/client';
 
-export async function getClientList(searchQuery?: string,sortField?:string,sortOrder:string = 'asc'): Promise<Client[]> {
+export async function getClientList(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<Client[]> {
     try {
         const url = new URL(API_URL + VIEW);
+        url.searchParams.append('page', page.toString());
+        url.searchParams.append('pageSize', numberOfItems.toString());
+
         if (searchQuery) {
             url.searchParams.append('search', searchQuery);
         }

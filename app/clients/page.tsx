@@ -40,7 +40,9 @@ export default function ClientManagement() {
     const [loading, setLoading] = useState(true)
     const [currentClient, setCurrentClient] = useState<Client | null>(null)
     const [searchTerm, setSearchTerm] = useState<string>('') // State for search term
-
+    const [sortField, setSortField] = useState<string>('') // State for sort field
+    const [sortOrder, setSortOrder] = useState<string>('asc') // State for sort order
+    const [page, setPage] = useState<number>(1) // State for page number
     const { toast } = useToast()
 
     const handleCreateClient = async (data: Record<string, string>) => {
@@ -87,7 +89,7 @@ export default function ClientManagement() {
     }
     const handleSearch  = (query: string) => {
         setSearchTerm(query); // Update search term state
-        getClientList(query).then((data) => {
+        getClientList(page,query).then((data) => {
             if (data !== undefined) {
                 setClients(data)
             } else {
@@ -100,8 +102,9 @@ export default function ClientManagement() {
         })
     }
     const handleSort = (column: string, direction: string) => {
-        console.log(column, direction)
-        getClientList(searchTerm,column,direction).then((data) => {
+        setSortField(column)
+        setSortOrder(direction)
+        getClientList(page,searchTerm,column,direction).then((data) => {
             if (data !== undefined) {
                 setClients(data)
             } else {
@@ -114,9 +117,23 @@ export default function ClientManagement() {
             setLoading(false)
         })
     }
+    const handlePageChange = (page: number) => {
+        console.log(page)
+        getClientList(page,searchTerm,sortField,sortOrder,).then((data) => {
+            if (data !== undefined) {
+                setClients(data)
+            } else {
+                setError('Failed to fetch projects')
+            }
+            setLoading(false)
+        }).catch((error: { message: SetStateAction<string | null> }) => {
+            setError(error.message)
+            setLoading(false)
+        })
+    }
     useEffect(() => {
         // fetch clients
-        getClientList().then((data) => {
+        getClientList(page,searchTerm,sortField,sortOrder,).then((data) => {
             if (data !== undefined) {
                 setClients(data)
             } else {
@@ -152,6 +169,7 @@ return (
             }}
             onSearch={handleSearch}
             onSort={handleSort}
+            onPageChange={handlePageChange}
 
         />
         <CrudModal
