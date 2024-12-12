@@ -100,4 +100,24 @@ export async function deleteProject(project: Project) {
         console.error('Error deleting project:', error);
         throw error;
     }
+
+}
+export async function getAll() {
+    try {
+        const response = await fetch(API_URL + VIEW + "/all", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch clients');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching clients:', error);
+        throw error;
+    }
 }
