@@ -15,11 +15,17 @@ import { Project, ProjectCreate,ProjectStatus } from '../models/project'
 import { Client } from '../models/client'
 
 const projectColumns: Column<Project>[] = [
-    { header: 'Name', accessorKey: 'name' },
-    { header: 'Description', accessorKey: 'description' },
-    { header: 'Client', accessorKey: 'clientId' },
-    { header: 'Status', accessorKey: 'status' },
-]
+    { header: 'Name', accessorKey: 'name', sortField: 'name' },
+    { header: 'Description', accessorKey: 'description', sortField: 'description' },
+    { 
+      header: 'Client', 
+      accessorKey: (row) => row.client?.name || 'No Client', 
+      sortField: 'client.name' // Backend-friendly sort key
+    },
+    { header: 'Status', accessorKey: 'status', sortField: 'status' },
+  ];
+  
+
 
 const projectFields = [
     { name: 'name', label: 'Name', type: 'text' as const },

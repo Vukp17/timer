@@ -20,6 +20,7 @@ export interface Project {
     createdAt?: Date;
     updatedAt?: Date;
     status?: ProjectStatus; 
+    client: Client;
 }
 
 

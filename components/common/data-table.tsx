@@ -30,20 +30,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
-// Debounce function
-function debounce(func: (...args: any[]) => void, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: any[]) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
+
 
 export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort, onPageChange }: DataTableProps<T>) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  
+
   const [filteredData, setFilteredData] = useState(data)
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -90,14 +83,20 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
     }
   }
 
-  const handleSort = (column: string) => {
-    const newOrder = sortColumn === column && sortOrder === 'asc' ? 'desc' : 'asc'
-    setSortColumn(column)
-    setSortOrder(newOrder)
+  const handleSort = (columnKey: keyof T | ((row: T) => React.ReactNode), sortField?: string) => {
+    // Determine the actual column to use for sorting
+    const column = typeof columnKey === 'string' ? columnKey : sortField;
+    if (!column) return; // Ensure we have a valid column
+
+    // Toggle sort order if already sorting by this column
+    const newOrder = sortColumn === column && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortColumn(column);
+    setSortOrder(newOrder);
+
     if (onSort) {
-      onSort(column, newOrder)
+      onSort(column, newOrder);
     }
-  }
+  };
 
   const handlePageChange = (newPage: number) => {
     router.push(pathname + '?' + createQueryString('page', newPage.toString()))
@@ -106,7 +105,6 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
     }
   }
 
-  const debouncedHandleSearch = useCallback(debounce(handleSearch, 300), [handleSearch]);
 
   return (
     <div className="space-y-4">
@@ -117,33 +115,42 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
           placeholder="Search..."
           className="max-w-sm"
           value={search}
-          onChange={(e) => debouncedHandleSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
         />
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
-              <TableHead key={column.accessorKey as string} onClick={() => handleSort(column.accessorKey as string)}>
+              <TableHead
+                key={String(column.accessorKey)}
+                onClick={() =>
+                  handleSort(column.accessorKey, column.sortField) // Pass `sortField` explicitly for function accessors
+                }
+                className="cursor-pointer"
+              >
                 {column.header}
-                {sortColumn === column.accessorKey && (
+                {sortColumn === column.sortField && (
                   sortOrder === 'asc' ? <ArrowUp className="inline-block ml-2" /> : <ArrowDown className="inline-block ml-2" />
                 )}
               </TableHead>
             ))}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
+
+
         </TableHeader>
         <TableBody>
           {paginatedData.map((item, index) => (
             <TableRow key={index}>
               {columns.map((column) => (
                 <TableCell key={column.accessorKey as string}>
-                  {typeof item[column.accessorKey] === 'object' && item[column.accessorKey] !== null
-                    ? (item[column.accessorKey] as any).name // Access nested object property
-                    : (item[column.accessorKey] as React.ReactNode)}
+                  {typeof column.accessorKey === 'function'
+                    ? column.accessorKey(item) // Invoke the accessor function
+                    : String(item[column.accessorKey as keyof T])}
                 </TableCell>
               ))}
+
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -166,7 +173,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
       <Pagination>
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious 
+            <PaginationPrevious
               href={page > 1 ? `${pathname}?${createQueryString('page', (page - 1).toString())}` : '#'}
               className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
               onClick={() => handlePageChange(page - 1)}
@@ -174,7 +181,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
           </PaginationItem>
           {[...Array(totalPages)].map((_, i) => (
             <PaginationItem key={i}>
-              <PaginationLink 
+              <PaginationLink
                 href={`${pathname}?${createQueryString('page', (i + 1).toString())}`}
                 isActive={page === i + 1}
                 onClick={() => handlePageChange(i + 1)}
@@ -184,7 +191,7 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
             </PaginationItem>
           ))}
           <PaginationItem>
-            <PaginationNext 
+            <PaginationNext
               href={page < totalPages ? `${pathname}?${createQueryString('page', (page + 1).toString())}` : '#'}
               className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
               onClick={() => handlePageChange(page + 1)}
