@@ -11,20 +11,20 @@ import { Layout } from '@/components/common/layout'
 import { getProjectList, createProject, updateProject, deleteProject } from '../actions/project';
 import { getAll } from '../actions/client';
 
-import { Project, ProjectCreate,ProjectStatus } from '../models/project'
+import { Project, ProjectCreate, ProjectStatus } from '../models/project'
 import { Client } from '../models/client'
 
 const projectColumns: Column<Project>[] = [
     { header: 'Name', accessorKey: 'name', sortField: 'name' },
     { header: 'Description', accessorKey: 'description', sortField: 'description' },
-    { 
-      header: 'Client', 
-      accessorKey: (row) => row.client?.name || 'No Client', 
-      sortField: 'client.name' // Backend-friendly sort key
+    {
+        header: 'Client',
+        accessorKey: (row) => row.client?.name || 'No Client',
+        sortField: 'client.name' // Backend-friendly sort key
     },
     { header: 'Status', accessorKey: 'status', sortField: 'status' },
-  ];
-  
+];
+
 
 
 const projectFields = [
@@ -82,7 +82,7 @@ export default function ProjectManagement() {
         const newProject: ProjectCreate = {
             name: data.name,
             description: data.description,
-            clientId:data.clientId ?  Number(data.clientId) : undefined,
+            clientId: data.clientId ? Number(data.clientId) : undefined,
             status: data.status as ProjectStatus,
         }
         const d = await createProject(newProject)
@@ -101,7 +101,7 @@ export default function ProjectManagement() {
             ...currentProject,
             name: data.name,
             description: data.description,
-            clientId:data.clientId ?  Number(data.clientId) : undefined,
+            clientId: data.clientId ? Number(data.clientId) : undefined,
             status: data.status as ProjectStatus,
         }
         const d = await updateProject(updatedProject)
@@ -155,7 +155,7 @@ export default function ProjectManagement() {
             setLoading(false)
         })
     }
-   const handlePageChange = (page: number) => {
+    const handlePageChange = (page: number) => {
         getProjectList(page, searchTerm, sortField, sortOrder,).then((data) => {
             if (data !== undefined) {
                 setProjects(data)
@@ -171,64 +171,62 @@ export default function ProjectManagement() {
 
     return (
         <Layout>
-            <div className="container mx-auto py-10">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Project Management</h1>
-                    <Button onClick={() => setIsCreateModalOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Project
-                    </Button>
-                </div>
-
-                <DataTable
-                    data={projects}
-                    columns={projectColumns}
-                    onEdit={(project) => {
-                        setCurrentProject(project)
-                        setIsEditModalOpen(true)
-                    }}
-                    onDelete={(project) => {
-                        setCurrentProject(project)
-                        setIsDeleteModalOpen(true)
-                    }}
-                    onSearch={handleSearch}
-                    onPageChange={handlePageChange}
-                    onSort={handleSort}
-                />
-
-                <CrudModal
-                    isOpen={isCreateModalOpen}
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSubmit={handleCreateProject}
-                    title="Create New Project"
-                    description="Add a new project to your list. Click save when you're done."
-                    fields={projectFields}
-                />
-
-                <CrudModal
-                    isOpen={isEditModalOpen}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSubmit={handleEditProject}
-                    title="Edit Project"
-                    description="Make changes to your project here. Click save when you're done."
-                    fields={projectFields}
-                    initialData={currentProject ? {
-                        name: currentProject.name,
-                        description: currentProject.description || '',
-                        status: currentProject.status || 'INACTIVE',
-                        clientId: currentProject.clientId ? clients.find(client => client.id === currentProject.clientId)?.name || '' : '',
-                    } : undefined}
-                />
-
-                <CrudModal
-                    isOpen={isDeleteModalOpen}
-                    onClose={() => setIsDeleteModalOpen(false)}
-                    onSubmit={handleDeleteProject}
-                    title="Confirm Deletion"
-                    description="Are you sure you want to delete this project? This action cannot be undone."
-                    fields={[]}
-                />
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">Project Management</h1>
+                <Button onClick={() => setIsCreateModalOpen(true)}>
+                    <PlusCircle className="mr-2" />
+                    New Project
+                </Button>
             </div>
+
+            <DataTable
+                data={projects}
+                columns={projectColumns}
+                onEdit={(project) => {
+                    setCurrentProject(project)
+                    setIsEditModalOpen(true)
+                }}
+                onDelete={(project) => {
+                    setCurrentProject(project)
+                    setIsDeleteModalOpen(true)
+                }}
+                onSearch={handleSearch}
+                onPageChange={handlePageChange}
+                onSort={handleSort}
+            />
+
+            <CrudModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreateProject}
+                title="Create New Project"
+                description="Add a new project to your list. Click save when you're done."
+                fields={projectFields}
+            />
+
+            <CrudModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSubmit={handleEditProject}
+                title="Edit Project"
+                description="Make changes to your project here. Click save when you're done."
+                fields={projectFields}
+                initialData={currentProject ? {
+                    name: currentProject.name,
+                    description: currentProject.description || '',
+                    status: currentProject.status || 'INACTIVE',
+                    clientId: currentProject.clientId ? clients.find(client => client.id === currentProject.clientId)?.id.toString() || '' : '',
+                } : undefined}
+            />
+
+            <CrudModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onSubmit={handleDeleteProject}
+                title="Confirm Deletion"
+                description="Are you sure you want to delete this project? This action cannot be undone."
+                fields={[]}
+            />
         </Layout>
     )
 }

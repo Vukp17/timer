@@ -73,7 +73,7 @@ export function CrudModal({
                 ) : field.type === 'select' ? (
                   <Select
                     name={field.name}
-                    defaultValue={initialData?.[field.name]}
+                    defaultValue={initialData?.[field.name] }
                   >
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select an option" />
