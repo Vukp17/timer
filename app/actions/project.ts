@@ -102,7 +102,7 @@ export async function deleteProject(project: Project) {
     }
 
 }
-export async function getAll() {
+export async function getAll():Promise<Project[]> {
     try {
         const response = await fetch(API_URL + VIEW + "/all", {
             method: "GET",

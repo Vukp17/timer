@@ -30,8 +30,6 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
-
-
 export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort, onPageChange }: DataTableProps<T>) {
   const router = useRouter()
   const pathname = usePathname()
@@ -105,7 +103,6 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
     }
   }
 
-
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
@@ -137,8 +134,6 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
             ))}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-
-
         </TableHeader>
         <TableBody>
           {paginatedData.map((item, index) => (
@@ -150,7 +145,6 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
                     : String(item[column.accessorKey as keyof T])}
                 </TableCell>
               ))}
-
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -170,35 +164,37 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
           ))}
         </TableBody>
       </Table>
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              href={page > 1 ? `${pathname}?${createQueryString('page', (page - 1).toString())}` : '#'}
-              className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
-              onClick={() => handlePageChange(page - 1)}
-            />
-          </PaginationItem>
-          {[...Array(totalPages)].map((_, i) => (
-            <PaginationItem key={i}>
-              <PaginationLink
-                href={`${pathname}?${createQueryString('page', (i + 1).toString())}`}
-                isActive={page === i + 1}
-                onClick={() => handlePageChange(i + 1)}
-              >
-                {i + 1}
-              </PaginationLink>
+      <div className="mx-auto flex w-full justify-end">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href={page > 1 ? `${pathname}?${createQueryString('page', (page - 1).toString())}` : '#'}
+                className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                onClick={() => handlePageChange(page - 1)}
+              />
             </PaginationItem>
-          ))}
-          <PaginationItem>
-            <PaginationNext
-              href={page < totalPages ? `${pathname}?${createQueryString('page', (page + 1).toString())}` : '#'}
-              className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
-              onClick={() => handlePageChange(page + 1)}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href={`${pathname}?${createQueryString('page', (i + 1).toString())}`}
+                  isActive={page === i + 1}
+                  onClick={() => handlePageChange(i + 1)}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href={page < totalPages ? `${pathname}?${createQueryString('page', (page + 1).toString())}` : '#'}
+                className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                onClick={() => handlePageChange(page + 1)}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </div>
   )
 }
