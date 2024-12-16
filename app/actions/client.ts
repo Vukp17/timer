@@ -1,9 +1,9 @@
-import { Project, ProjectCreate } from "../models/project";
+import { Client, ClientCreate } from "../models/client";
+
 const API_URL = process.env.API_URL || "http://localhost:4000";
-const VIEW = '/project';
+const VIEW = '/client';
 
-
-export async function getProjectList(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10) {
+export async function getClientList(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<Client[]> {
     try {
         const url = new URL(API_URL + VIEW);
         url.searchParams.append('page', page.toString());
@@ -39,85 +39,98 @@ export async function getProjectList(page: number, searchQuery?: string, sortFie
     }
 }
 
-
-
-export async function createProject(project: ProjectCreate) {
+export async function create(client: ClientCreate): Promise<Client> {
     try {
-        const response = await fetch("http://localhost:4000/project", {
+        const response = await fetch(API_URL + VIEW, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-            body: JSON.stringify(project),
+            body: JSON.stringify(client),
         });
+        if (response.status === 401) {
+            window.location.href = '/login';
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) {
-            throw new Error('Failed to create project');
+            throw new Error('Failed to create client');
         }
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error creating project:', error);
+        console.error('Error creating client:', error);
         throw error;
     }
 }
-export async function updateProject(project: Project) {
+
+export async function update(client: Client): Promise<Client> {
     try {
-        const response = await fetch("http://localhost:4000/project/" + project.id, {
+        const response = await fetch(API_URL + VIEW + `/${client.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-            body: JSON.stringify(project),
+            body: JSON.stringify(client),
         });
+        if (response.status === 401) {
+            window.location.href = '/login';
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) {
-            throw new Error('Failed to update project');
+            throw new Error('Failed to update client');
         }
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error updating project:', error);
+        console.error('Error updating client:', error);
         throw error;
     }
 }
-export async function deleteProject(project: Project) {
+
+export async function remove(client: Client): Promise<void> {
     try {
-        const response = await fetch("http://localhost:4000/project", {
+        const response = await fetch(API_URL + VIEW + `/${client.id}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-            body: JSON.stringify(project),
         });
-        if (!response.ok) {
-            throw new Error('Failed to delete project');
+        if (response.status === 401) {
+            window.location.href = '/login';
+            throw new Error('Unauthorized');
         }
-        const data = await response.json();
-        return data;
+        if (!response.ok) {
+            throw new Error('Failed to delete client');
+        }
     } catch (error) {
-        console.error('Error deleting project:', error);
+        console.error('Error deleting client:', error);
         throw error;
     }
-
 }
-export async function getAll():Promise<Project[]> {
+
+export async function getAll(): Promise<Client[]> {
     try {
-        const response = await fetch(API_URL + VIEW + "/all", {
+        const response = await fetch(API_URL + VIEW + '/all', {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
         });
+        if (response.status === 401) {
+            window.location.href = '/login';
+            return [];
+        }
         if (!response.ok) {
-            throw new Error('Failed to fetch clients');
+            throw new Error('Failed to fetch client list');
         }
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error fetching clients:', error);
+        console.error('Error fetching client list:', error);
         throw error;
     }
 }

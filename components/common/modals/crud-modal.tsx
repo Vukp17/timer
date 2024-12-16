@@ -11,12 +11,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Field {
   name: string
   label: string
   type: 'text' | 'textarea' | 'select'
-  options?: string[]
+  options?: { id: string | number, label: string }[] // Updated to support objects
 }
 
 interface CrudModalProps {
@@ -70,18 +71,21 @@ export function CrudModal({
                     className="col-span-3"
                   />
                 ) : field.type === 'select' ? (
-                  <select
-                    id={field.name}
+                  <Select
                     name={field.name}
-                    defaultValue={initialData?.[field.name]}
-                    className="col-span-3 flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    defaultValue={initialData?.[field.name] }
                   >
-                    {field.options?.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select an option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((option) => (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <Input
                     id={field.name}
@@ -101,4 +105,3 @@ export function CrudModal({
     </Dialog>
   )
 }
-
