@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ProjectMenu } from "./project-menu";
+import { TagMenu } from "./tag-menu"; // Import TagMenu
+import { getaAllTags } from "@/app/actions/tags"; // Import getAllTags
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAll } from "@/app/actions/project";
 import { Project } from "@/app/models/project";
+import { Tag } from "@/app/models/tag";
 
 export function TimeTracker() {
   const [description, setDescription] = useState("");
@@ -21,6 +24,8 @@ export function TimeTracker() {
   const [timerStart, setTimerStart] = useState<number | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [tags, setTags] = useState<Tag[]>([]); // State for tags
+  const [selectedTag, setSelectedTag] = useState<string>(""); // State for selected tag
 
   const handleStartStop = () => {
     if (!isTracking) {
@@ -60,6 +65,13 @@ export function TimeTracker() {
     };
     fetchProjects();
 
+    // Fetch tags (replace with your actual tag fetching logic)
+    const fetchTags = async () => {
+      const data = await getaAllTags(); // Replace with your actual tag fetching function
+      setTags(data);
+    };
+    fetchTags();
+
     let interval: NodeJS.Timeout;
     if (isTracking && !isManualMode) {
       interval = setInterval(() => {
@@ -78,6 +90,7 @@ export function TimeTracker() {
       <CardContent className="p-6">
         <div className="flex flex-wrap lg:flex-nowrap gap-4">
           {/* First Row */}
+
           <div className="flex flex-col lg:flex-row lg:items-center lg:flex-grow gap-4">
             <Input
               placeholder="What are you working on?"
@@ -89,6 +102,11 @@ export function TimeTracker() {
               projects={projects}
               selectedProject={selectedProject}
               onSelectProject={setSelectedProject}
+            />
+            <TagMenu
+              tags={tags}
+              selectedTag={selectedTag}
+              onSelectTag={setSelectedTag}
             />
           </div>
 
@@ -129,7 +147,7 @@ export function TimeTracker() {
               </Toggle>
             </div>
             <div className="flex items-center space-x-4">
-            <Button onClick={handleStartStop}>
+              <Button onClick={handleStartStop}>
                 {isTracking ? (
                   <Square className="mr-2 h-4 w-4" />
                 ) : (
@@ -151,7 +169,6 @@ export function TimeTracker() {
                   )}
                 </Label>
               </div>
-
             </div>
           </div>
         </div>
