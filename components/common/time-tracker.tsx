@@ -12,11 +12,12 @@ import { Label } from "@/components/ui/label";
 import { getAll } from "@/app/actions/project";
 import { Project } from "@/app/models/project";
 import { Tag } from "@/app/models/tag";
+import { createStart, updateOnStopTimer } from "@/app/actions/timer";
 
 export function TimeTracker() {
   const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
   const [duration, setDuration] = useState("");
   const [isBillable, setIsBillable] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
@@ -26,17 +27,33 @@ export function TimeTracker() {
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [tags, setTags] = useState<Tag[]>([]); // State for tags
   const [selectedTag, setSelectedTag] = useState<string>(""); // State for selected tag
+  const [currentTimerId, setCurrentTimerId] = useState<string | null>(null); // State for current timer ID
 
   const handleStartStop = () => {
     if (!isTracking) {
+      // Starting a new timer
       if (isManualMode) {
-        setStartTime(new Date().toLocaleTimeString());
+        setStartTime(new Date().toISOString());
       } else {
         setTimerStart(Date.now());
       }
+
+      createStart({
+        startTime: new Date().toISOString(),
+        endTime: null,
+        duration: undefined,
+        description,
+        projectId: parseInt(selectedProject),
+        tagId: parseInt(selectedTag),
+      }).then((response) => {
+        console.log("Timer created successfully");
+        setCurrentTimerId(response.id.toString()); // Save the timer ID
+        setIsTracking(true);
+      });
     } else {
+      // Stopping the existing timer
       if (isManualMode) {
-        setEndTime(new Date().toLocaleTimeString());
+        setEndTime(new Date().toISOString());
       } else {
         const endTime = Date.now();
         const durationInSeconds = Math.floor(
@@ -45,8 +62,17 @@ export function TimeTracker() {
         setDuration(formatDuration(durationInSeconds));
         setTimerStart(null);
       }
+
+      updateOnStopTimer({
+        id: currentTimerId ? parseInt(currentTimerId) : 0,
+        endTime: new Date(),
+        duration: isManualMode ? undefined : parseInt(duration),
+      }).then(() => {
+        console.log("Timer updated successfully");
+        setIsTracking(false);
+        setCurrentTimerId(null); // Clear the timer ID
+      });
     }
-    setIsTracking(!isTracking);
   };
 
   const formatDuration = (seconds: number): string => {
@@ -90,13 +116,12 @@ export function TimeTracker() {
       <CardContent className="p-6">
         <div className="flex flex-wrap lg:flex-nowrap gap-4">
           {/* First Row */}
-
           <div className="flex flex-col lg:flex-row lg:items-center lg:flex-grow gap-4">
             <Input
               placeholder="What are you working on?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="flex-grow"
+              className="flex-grow h-12 text-lg"
             />
             <ProjectMenu
               projects={projects}
@@ -117,15 +142,15 @@ export function TimeTracker() {
                 <>
                   <Input
                     type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
+                    onChange={(e) => setStartTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
                     className="w-32"
                   />
                   <span>-</span>
                   <Input
                     type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    value={endTime ? endTime.split("T")[1].substring(0, 5) : ""}
+                    onChange={(e) => setEndTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
                     className="w-32"
                   />
                 </>
