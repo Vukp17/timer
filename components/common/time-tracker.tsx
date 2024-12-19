@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ProjectMenu } from "./project-menu";
 import { TagMenu } from "./tag-menu"; // Import TagMenu
+import { TimerList } from "./timer-list"; // Import TimerList
 import { getaAllTags } from "@/app/actions/tags"; // Import getAllTags
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,7 @@ export function TimeTracker() {
       }
 
       createStart({
-        startTime: new Date().toISOString(),
+        startTime: new Date(),
         endTime: null,
         duration: undefined,
         description,
@@ -198,6 +199,7 @@ export function TimeTracker() {
           </div>
         </div>
       </CardContent>
+      <TimerList projects={projects} /> {/* Add TimerList component here */}
     </Card>
   );
 }
