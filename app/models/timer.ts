@@ -18,3 +18,8 @@ export interface Timer {
     project?: Project
     tag?: Tag
 }
+
+
+export interface GroupedTimers {
+    [key: string]: Timer[];
+  }

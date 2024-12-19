@@ -113,93 +113,96 @@ export function TimeTracker() {
   }, [isTracking, isManualMode, timerStart]);
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-6">
-        <div className="flex flex-wrap lg:flex-nowrap gap-4">
-          {/* First Row */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:flex-grow gap-4">
-            <Input
-              placeholder="What are you working on?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="flex-grow h-12 text-lg"
-            />
-            <ProjectMenu
-              projects={projects}
-              selectedProject={selectedProject}
-              onSelectProject={setSelectedProject}
-            />
-            <TagMenu
-              tags={tags}
-              selectedTag={selectedTag}
-              onSelectTag={setSelectedTag}
-            />
-          </div>
-
-          {/* Second Row */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-4">
-            <div className="flex flex-wrap items-center gap-4">
-              {isManualMode ? (
-                <>
-                  <Input
-                    type="time"
-                    value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
-                    onChange={(e) => setStartTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
-                    className="w-32"
-                  />
-                  <span>-</span>
-                  <Input
-                    type="time"
-                    value={endTime ? endTime.split("T")[1].substring(0, 5) : ""}
-                    onChange={(e) => setEndTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
-                    className="w-32"
-                  />
-                </>
-              ) : (
-                <Input
-                  type="text"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="00:00:00"
-                  className="w-32"
-                />
-              )}
-              <Toggle
-                aria-label="Toggle billable"
-                pressed={isBillable}
-                onPressedChange={setIsBillable}
-              >
-                <DollarSign className="h-4 w-4" />
-              </Toggle>
+    <div>
+      <Card className="w-full">
+        <CardContent className="p-6">
+          <div className="flex flex-wrap lg:flex-nowrap gap-4">
+            {/* First Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:flex-grow gap-4">
+              <Input
+                placeholder="What are you working on?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="flex-grow h-12 text-lg"
+              />
+              <ProjectMenu
+                projects={projects}
+                selectedProject={selectedProject}
+                onSelectProject={setSelectedProject}
+              />
+              <TagMenu
+                tags={tags}
+                selectedTag={selectedTag}
+                onSelectTag={setSelectedTag}
+              />
             </div>
-            <div className="flex items-center space-x-4">
-              <Button onClick={handleStartStop}>
-                {isTracking ? (
-                  <Square className="mr-2 h-4 w-4" />
+
+            {/* Second Row */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {isManualMode ? (
+                  <>
+                    <Input
+                      type="time"
+                      value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
+                      onChange={(e) => setStartTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
+                      className="w-32"
+                    />
+                    <span>-</span>
+                    <Input
+                      type="time"
+                      value={endTime ? endTime.split("T")[1].substring(0, 5) : ""}
+                      onChange={(e) => setEndTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
+                      className="w-32"
+                    />
+                  </>
                 ) : (
-                  <Play className="mr-2 h-4 w-4" />
+                  <Input
+                    type="text"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    placeholder="00:00:00"
+                    className="w-32"
+                  />
                 )}
-                {isTracking ? "Stop" : "Start"}
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="mode-switch"
-                  checked={!isManualMode}
-                  onCheckedChange={(checked) => setIsManualMode(!checked)}
-                />
-                <Label htmlFor="mode-switch">
-                  {isManualMode ? (
-                    <Clock className="h-4 w-4" />
+                <Toggle
+                  aria-label="Toggle billable"
+                  pressed={isBillable}
+                  onPressedChange={setIsBillable}
+                >
+                  <DollarSign className="h-4 w-4" />
+                </Toggle>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button onClick={handleStartStop}>
+                  {isTracking ? (
+                    <Square className="mr-2 h-4 w-4" />
                   ) : (
-                    <StopCircle className="h-4 w-4" />
+                    <Play className="mr-2 h-4 w-4" />
                   )}
-                </Label>
+                  {isTracking ? "Stop" : "Start"}
+                </Button>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="mode-switch"
+                    checked={!isManualMode}
+                    onCheckedChange={(checked) => setIsManualMode(!checked)}
+                  />
+                  <Label htmlFor="mode-switch">
+                    {isManualMode ? (
+                      <Clock className="h-4 w-4" />
+                    ) : (
+                      <StopCircle className="h-4 w-4" />
+                    )}
+                  </Label>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-      <TimerList projects={projects} /> {/* Add TimerList component here */}
-    </Card>
+        </CardContent>
+      </Card>
+      <TimerList projects={projects} />
+
+    </div>
   );
 }

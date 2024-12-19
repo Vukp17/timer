@@ -3,13 +3,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getTimers, updateOnStopTimer } from "@/app/actions/timer"; // Import the functions to fetch and update timers
-import { Timer } from "@/app/models/timer"; // Import the Timer model
+import { GroupedTimers, Timer } from "@/app/models/timer"; // Import the Timer model
 import { Project } from "@/app/models/project";
 import { Play, Square, Edit } from "lucide-react";
 import { ProjectMenu } from "./project-menu";
 
+
+
 export function TimerList({ projects }: { projects: Project[] }) {
-  const [timers, setTimers] = useState<Timer[]>([]);
+  const [timers, setTimers] = useState<GroupedTimers[]>([]);
   const [editingTimerId, setEditingTimerId] = useState<number | null>(null);
   const [editedDescription, setEditedDescription] = useState<string>("");
   const [editedStartTime, setEditedStartTime] = useState<Date | null>(null);
@@ -19,8 +21,8 @@ export function TimerList({ projects }: { projects: Project[] }) {
 
   useEffect(() => {
     const fetchTimers = async () => {
-      const data = await getTimers(0);
-      setTimers(data);
+      const groupedData = await getTimers(0);
+      setTimers(groupedData);
     };
     fetchTimers();
   }, []);
@@ -87,55 +89,59 @@ export function TimerList({ projects }: { projects: Project[] }) {
   };
 
   return (
-    <Card className="w-full mt-4">
-      <CardContent className="p-6">
-        <ul>
-          {timers.map((timer) => (
-            <li key={timer.id} className="mb-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <Input
-                  value={editingTimerId === timer.id ? editedDescription : timer.description ?? ""}
-                  onChange={(e) => setEditedDescription(e.target.value)}
-                  onBlur={() => handleBlur(timer.id)}
-                  placeholder="Description"
-                  className="flex-1 min-w-[150px]"
-                />
-                <Input
-                  type="datetime-local"
-                  value={editingTimerId === timer.id && editedStartTime ? editedStartTime.toISOString().slice(0, 16) : timer.startTime ? new Date(timer.startTime).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => setEditedStartTime(e.target.value ? new Date(e.target.value) : null)}
-                  onBlur={() => handleBlur(timer.id)}
-                  className="flex-1 min-w-[200px]"
-                />
-                <Input
-                  type="datetime-local"
-                  value={editingTimerId === timer.id && editedEndTime ? editedEndTime.toISOString().slice(0, 16) : timer.endTime ? new Date(timer.endTime).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => setEditedEndTime(e.target.value ? new Date(e.target.value) : null)}
-                  onBlur={() => handleBlur(timer.id)}
-                  className="flex-1 min-w-[200px]"
-                />
-                <Input
-                  type="text"
-                  value={editingTimerId === timer.id ? editedDuration : convertMinutesToDuration(timer.duration ?? 0)}
-                  onChange={(e) => setEditedDuration(e.target.value)}
-                  onBlur={() => handleBlur(timer.id)}
-                  placeholder="Duration (HH:MM:SS)"
-                  className="flex-1 min-w-[150px]"
-                />
-                <ProjectMenu
-                  projects={projects}
-                  selectedProject={editingTimerId === timer.id ? String(editedProjectId) : String(timer.project?.id)}
-                  onSelectProject={(projectId) => setEditedProjectId(Number(projectId))}
-                />
-                <Button onClick={() => handleStartStop(timer)}>
-                  {timer.endTime ? <Play className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                </Button>
-
-              </div>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <div className="w-full mt-4">
+      {Object.keys(timers).map((date) => (
+        <Card key={date} className="mb-4">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">{date}</h3>
+            <ul>
+              {timers[date].map((timer: Timer) => (
+                <li key={timer.id} className="mb-4">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <Input
+                      value={editingTimerId === timer.id ? editedDescription : timer.description ?? ""}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                      onBlur={() => handleBlur(timer.id)}
+                      placeholder="Description"
+                      className="flex-1 min-w-[150px]"
+                    />
+                    <Input
+                      type="datetime-local"
+                      value={editingTimerId === timer.id && editedStartTime ? editedStartTime.toISOString().slice(0, 16) : timer.startTime ? new Date(timer.startTime).toISOString().slice(0, 16) : ""}
+                      onChange={(e) => setEditedStartTime(e.target.value ? new Date(e.target.value) : null)}
+                      onBlur={() => handleBlur(timer.id)}
+                      className="flex-1 min-w-[200px]"
+                    />
+                    <Input
+                      type="datetime-local"
+                      value={editingTimerId === timer.id && editedEndTime ? editedEndTime.toISOString().slice(0, 16) : timer.endTime ? new Date(timer.endTime).toISOString().slice(0, 16) : ""}
+                      onChange={(e) => setEditedEndTime(e.target.value ? new Date(e.target.value) : null)}
+                      onBlur={() => handleBlur(timer.id)}
+                      className="flex-1 min-w-[200px]"
+                    />
+                    <Input
+                      type="text"
+                      value={editingTimerId === timer.id ? editedDuration : convertMinutesToDuration(timer.duration ?? 0)}
+                      onChange={(e) => setEditedDuration(e.target.value)}
+                      onBlur={() => handleBlur(timer.id)}
+                      placeholder="Duration (HH:MM:SS)"
+                      className="flex-1 min-w-[150px]"
+                    />
+                    <ProjectMenu
+                      projects={projects}
+                      selectedProject={editingTimerId === timer.id ? String(editedProjectId) : String(timer.project?.id)}
+                      onSelectProject={(projectId) => setEditedProjectId(Number(projectId))}
+                    />
+                    <Button onClick={() => handleStartStop(timer)}>
+                      {timer.endTime ? <Play className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

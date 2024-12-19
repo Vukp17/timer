@@ -1,4 +1,4 @@
-import { TimerCreate, Timer } from "../models/timer";
+import { TimerCreate, Timer, GroupedTimers } from "../models/timer";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 const VIEW = '/timer';
@@ -46,7 +46,7 @@ export function updateOnStopTimer(data: Timer): Promise<Timer> {
         });
 }
 
-export async function getTimers(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<Timer[]> {
+export async function getTimers(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<GroupedTimers[]> {
     try {
         const url = new URL(API_URL + VIEW);
         url.searchParams.append('page', page.toString());
