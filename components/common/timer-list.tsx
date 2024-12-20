@@ -30,7 +30,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
       await updateOnStopTimer({
         id: timer.id,
         description: description,
-        startTime: ""
+        startTime: undefined,
       });
       const { groupedTimers } = await getTimers(currentPage);
       setTimers(groupedTimers);
@@ -98,7 +98,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
       await Promise.all(groupTimers.map(timer =>
         updateOnStopTimer({
           id: timer.id,
-          startTime: timer.startTime ?? new Date(),
+          startTime: timer.startTime,
           endTime: timer.endTime,
           duration: timer.duration,
           projectId: updateData.project?.id,
@@ -109,7 +109,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
     } else {
       await updateOnStopTimer({
         id: timerId,
-        startTime: editedStartTime ? editedStartTime : new Date(),
+        startTime: editedStartTime,
         endTime: editedEndTime ?? undefined,
         duration: editedDuration ? convertDurationToMinutes(editedDuration) : undefined,
         projectId: updateData.project?.id,
@@ -278,6 +278,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+      <Toaster />
     </div>
   );
 }
