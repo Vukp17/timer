@@ -58,7 +58,7 @@ export function Sidebar() {
                 </Button>
                 <div className="flex items-center mb-8">
                     <Hourglass className="h-8 w-8" />
-                    {!isCollapsed && <span className="ml-2 text-xl font-bold">Time Tracker</span>}
+                    {!isCollapsed && <span className="ml-2 text-xl font-bold">Timer</span>}
 
                 </div>
 

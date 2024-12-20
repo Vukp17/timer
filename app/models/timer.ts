@@ -23,3 +23,17 @@ export interface Timer {
 export interface GroupedTimers {
     [key: string]: Timer[];
   }
+
+export interface TimerResponse {
+    groupedTimers: GroupedTimers[];
+    totalCount: number;
+}
+export interface TimerUpdate {
+    id: number
+    startTime?: Date | string | null
+    endTime?: Date | string | null
+    duration?: number | null
+    description?: string | null
+    projectId?: number | null
+    tagId?: number | null
+}
