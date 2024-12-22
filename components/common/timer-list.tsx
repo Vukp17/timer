@@ -9,7 +9,8 @@ import { Play, Square, ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon 
 import { ProjectMenu } from "./project-menu";
 import { debounce } from "@/utils/debounce";
 import { Toaster } from "../ui/toaster";
-import { convertDurationToMinutes, convertMinutesToDuration } from "@/utils/time";
+import { toast } from "@/components/ui/use-toast";
+import { convertDurationToMinutes, convertMinutesToDuration, combineDateAndTime, validateAndFormatTime } from "@/utils/time";
 
 export function TimerList({ projects }: { projects: Project[] }) {
   const [timers, setTimers] = useState<GroupedTimers[]>([]);
@@ -24,6 +25,8 @@ export function TimerList({ projects }: { projects: Project[] }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [groupedTimers, setGroupedTimers] = useState<Record<string, (Timer | Timer[])[]>>({});
   const [currentEditingTimer, setCurrentEditingTimer] = useState<Timer | null>(null);
+  const [editedStartTimeString, setEditedStartTimeString] = useState<string>("");
+  const [editedEndTimeString, setEditedEndTimeString] = useState<string>("");
 
   const debouncedSave = useCallback(
     debounce(async (timer: Timer, description: string) => {
@@ -85,43 +88,74 @@ export function TimerList({ projects }: { projects: Project[] }) {
 
   const handleSave = async (timerId: number, isGrouped: boolean = false, groupTimers: Timer[] = []) => {
 
+    const startTime = editedStartTimeString ? combineDateAndTime(new Date(), editedStartTimeString) : new Date();
+    const endTime = editedEndTimeString ? combineDateAndTime(new Date(), editedEndTimeString) : undefined;
+    const duration = editedDuration ? convertDurationToMinutes(editedDuration) : undefined;
+
     const updateData = {
       id: timerId,
-      startTime: editedStartTime ? editedStartTime : new Date(),
-      endTime: editedEndTime ?? undefined,
-      duration: editedDuration ? convertDurationToMinutes(editedDuration) : undefined,
+      startTime,
+      endTime,
+      duration,
       project: editedProjectId ? projects.find(project => project.id === editedProjectId) : undefined
     };
-
-    if (isGrouped) {
-      // Update all timers in the group
-      await Promise.all(groupTimers.map(timer =>
-        updateOnStopTimer({
-          id: timer.id,
-          startTime: timer.startTime,
-          endTime: timer.endTime,
-          duration: timer.duration,
+    console.log(updateData);
+    try {
+      if (isGrouped) {
+        // Update all timers in the group
+        await Promise.all(groupTimers.map(timer =>
+          updateOnStopTimer({
+            id: timer.id,
+            startTime: timer.startTime,
+            endTime: timer.endTime,
+            duration: timer.duration,
+            projectId: updateData.project?.id,
+            tagId: undefined,
+            description: editedDescription
+          })
+        ));
+      } else {
+        await updateOnStopTimer({
+          id: timerId,
+          startTime: updateData.startTime,
+          endTime: updateData.endTime,
+          duration: updateData.duration,
           projectId: updateData.project?.id,
           tagId: undefined,
           description: editedDescription
-        })
-      ));
-    } else {
-      await updateOnStopTimer({
-        id: timerId,
-        startTime: editedStartTime,
-        endTime: editedEndTime ?? undefined,
-        duration: editedDuration ? convertDurationToMinutes(editedDuration) : undefined,
-        projectId: updateData.project?.id,
-        tagId: undefined,
-        description: editedDescription
+        });
+      }
+
+      setEditingTimerId(null);
+      const { groupedTimers } = await getTimers(currentPage);
+      setTimers(groupedTimers);
+
+      toast({
+        title: "Timer updated",
+        description: "Your timer has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update the timer. Please try again.",
+        variant: "destructive",
       });
     }
+  };
 
-    setEditingTimerId(null);
-    const { groupedTimers } = await getTimers(currentPage);
-    setTimers(groupedTimers);
+  useEffect(() => {
+    if (editedProjectId !== null) {
+      handleSave(editingTimerId as number);
+    }
+  }, [editedProjectId]);
 
+  const updateDuration = () => {
+    if (editedStartTimeString && editedEndTimeString) {
+      const start = new Date(`1970-01-01T${editedStartTimeString}`);
+      const end = new Date(`1970-01-01T${editedEndTimeString}`);
+      const durationInMinutes = (end.getTime() - start.getTime()) / 60000;
+      setEditedDuration(convertMinutesToDuration(durationInMinutes));
+    }
   };
 
   const handleStartStop = async (timer: Timer) => {
@@ -153,12 +187,13 @@ export function TimerList({ projects }: { projects: Project[] }) {
       handleSave(timerId);
     }
   };
-
-
   const renderTimer = (timer: Timer | Timer[], isGrouped: boolean = false) => {
     const firstTimer = Array.isArray(timer) ? timer[0] : timer;
     const groupTimers = Array.isArray(timer) ? timer : [timer];
     const totalDuration = groupTimers.reduce((sum, t) => sum + (t.duration || 0), 0);
+
+
+
 
     return (
       <div key={firstTimer.id} className="flex items-center gap-4 flex-wrap mb-2">
@@ -193,25 +228,61 @@ export function TimerList({ projects }: { projects: Project[] }) {
           }}
         />
         <Input
-          type="datetime-local"
-          value={firstTimer.startTime ? new Date(firstTimer.startTime).toISOString().slice(0, 16) : ""}
-          onChange={isGrouped ? undefined : (e) => setEditedStartTime(e.target.value ? new Date(e.target.value) : null)}
-          onBlur={() => handleBlur(firstTimer.id, isGrouped, groupTimers)}
-          readOnly={isGrouped}
-          className="flex-1 min-w-[200px]"
+          type="text"
+          value={editingTimerId === firstTimer.id ? editedStartTimeString : (firstTimer.startTime ? new Date(firstTimer.startTime).toTimeString().slice(0, 8) : "")}
+          onChange={(e) => {
+            setEditedStartTimeString(e.target.value); // Allow free typing
+          }}
+          onFocus={() => {
+            setEditingTimerId(firstTimer.id);
+            setEditedStartTimeString(firstTimer.startTime ? new Date(firstTimer.startTime).toTimeString().slice(0, 8) : "");
+          }}
+          onBlur={() => {
+            const formattedTime = validateAndFormatTime(editedStartTimeString);
+            console.log(formattedTime, editedEndTimeString, "formattedTime");
+
+            if (formattedTime) {
+              setEditedStartTimeString(formattedTime);
+              updateDuration();
+              handleBlur(firstTimer.id, isGrouped, groupTimers);
+
+            }
+          }}
+          placeholder="00:00:00"
+          className="flex-1 min-w-[150px]"
         />
+
         <Input
-          type="datetime-local"
-          value={firstTimer.endTime ? new Date(firstTimer.endTime).toISOString().slice(0, 16) : ""}
-          onChange={isGrouped ? undefined : (e) => setEditedEndTime(e.target.value ? new Date(e.target.value) : null)}
-          onBlur={() => handleBlur(firstTimer.id, isGrouped, groupTimers)}
-          readOnly={isGrouped}
-          className="flex-1 min-w-[200px]"
+          type="text"
+          value={editingTimerId === firstTimer.id ? editedEndTimeString : (firstTimer.endTime ? new Date(firstTimer.endTime).toTimeString().slice(0, 8) : "")}
+          onChange={(e) => {
+            setEditedEndTimeString(e.target.value); // Allow free typing
+          }}
+          onFocus={() => {
+            setEditingTimerId(firstTimer.id);
+            setEditedEndTimeString(firstTimer.endTime ? new Date(firstTimer.endTime).toTimeString().slice(0, 8) : "");
+          }}
+          onBlur={() => {
+            const formattedTime = validateAndFormatTime(editedEndTimeString);
+            if (formattedTime) {
+              console.log(formattedTime, editedEndTimeString, "formattedTime");
+              setEditedEndTimeString(formattedTime);
+              updateDuration();
+              handleBlur(firstTimer.id, isGrouped, groupTimers);
+
+            } else {
+
+            }
+          }}
+          placeholder="00:00:00"
+          className="flex-1 min-w/[150px]"
         />
         <Input
           type="text"
+          onChange={(e) => {
+            setEditedDuration(e.target.value);
+          }}
           value={convertMinutesToDuration(totalDuration)}
-          readOnly
           className="flex-1 min-w-[150px]"
         />
         {isGrouped ? (
@@ -282,4 +353,3 @@ export function TimerList({ projects }: { projects: Project[] }) {
     </div>
   );
 }
-

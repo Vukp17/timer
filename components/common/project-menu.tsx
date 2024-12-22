@@ -27,7 +27,6 @@ interface ProjectMenuProps {
 
 export function ProjectMenu({ projects = [], selectedProject, onSelectProject }: ProjectMenuProps) {
   const [open, setOpen] = useState(false)
-  console.log(projects.find((project) => project.id.toString() === selectedProject)?.name)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

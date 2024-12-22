@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ProjectMenu } from "./project-menu";
 import { TagMenu } from "./tag-menu"; // Import TagMenu
-import { TimerList } from "./timer-list"; // Import TimerList
+import { TimerList } from "./timer/timer-list"; // Import TimerList
 import { getaAllTags } from "@/app/actions/tags"; // Import getAllTags
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
