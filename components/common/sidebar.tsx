@@ -79,10 +79,11 @@ export function Sidebar() {
                                                     isCollapsed && "justify-center"
                                                 )}
                                             >
-                                                <Link href={item.href} className="flex items-center">
-                                                    <item.icon className="h-6 w-6" />
+                                                <Link href={item.href} className={cn("flex items-center", !isCollapsed ? "justify-start" : "justify-center")}>
+                                                    <item.icon className="h-6 w-6 shrink-0" />
                                                     {!isCollapsed && <span className="ml-2">{item.label}</span>}
                                                 </Link>
+
                                             </Button>
                                         </TooltipTrigger>
                                         {isCollapsed && (
@@ -112,8 +113,8 @@ export function Sidebar() {
                                                     isCollapsed && "justify-center"
                                                 )}
                                             >
-                                                <Link href={item.href} className="flex items-center">
-                                                    <item.icon className="h-6 w-6" />
+                                                <Link href={item.href} className={cn("flex items-center", !isCollapsed ? "justify-start" : "justify-center")}>
+                                                    <item.icon className="h-6 w-6 shrink-0" />
                                                     {!isCollapsed && <span className="ml-2">{item.label}</span>}
                                                 </Link>
                                             </Button>
