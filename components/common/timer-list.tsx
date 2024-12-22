@@ -50,12 +50,15 @@ export function TimerList({ projects }: { projects: Project[] }) {
     fetchTimers();
   }, [currentPage]);
 
+
   useEffect(() => {
     const grouped: Record<string, (Timer | Timer[])[]> = {};
-    Object.entries(timers).forEach(([date, dateTimers]) => {
+    console.log(timers, "timers");  
+
+    timers.forEach(({ date, timers }) => {
       grouped[date] = [];
       const groupMap: Record<string, Timer[]> = {};
-      dateTimers.forEach((timer: Timer) => {
+      timers.forEach((timer: Timer) => {
         const key = `${timer.description}-${timer.project?.id || 'no-project'}`;
         if (!groupMap[key]) {
           groupMap[key] = [];
@@ -70,6 +73,24 @@ export function TimerList({ projects }: { projects: Project[] }) {
         }
       });
     });
+    // Object.entries(timers).forEach(([date, dateTimers]) => {
+    //   grouped[date] = [];
+    //   const groupMap: Record<string, Timer[]> = {};
+    //   dateTimers.forEach((timer: Timer) => {
+    //     const key = `${timer.description}-${timer.project?.id || 'no-project'}`;
+    //     if (!groupMap[key]) {
+    //       groupMap[key] = [];
+    //     }
+    //     groupMap[key].push(timer);
+    //   });
+    //   Object.values(groupMap).forEach(group => {
+    //     if (group.length > 1) {
+    //       grouped[date].push(group);
+    //     } else {
+    //       grouped[date].push(group[0]);
+    //     }
+    //   });
+    // });
     setGroupedTimers(grouped);
   }, [timers]);
 

@@ -3,7 +3,7 @@ import { Timer } from "@/app/models/timer";
 import { TimerItem } from "./timer-item";
 import { Project } from "@/app/models/project";
 
-export function TimerGroup({ date, entries, projects }: { date: string; entries: (Timer | Timer[])[]; projects: Project[] }) {
+export function TimerGroup({ date, entries, projects }: { date: string; entries: Timer[]; projects: Project[] }) {
   return (
     <Card className="mb-4">
       <CardContent className="p-6">

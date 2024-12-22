@@ -21,7 +21,8 @@ export interface Timer {
 
 
 export interface GroupedTimers {
-    [key: string]: Timer[];
+    date: string;
+    timers: Timer[];
   }
 
 export interface TimerResponse {

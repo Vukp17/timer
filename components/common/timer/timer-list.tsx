@@ -24,28 +24,32 @@ export function TimerList({ projects }: { projects: Project[] }) {
 
     return (
         <div className="w-full mt-4">
-            {timers.map((groupedTimer) => (
-    
-                <TimerGroup key={groupedTimer.date.toString()} date={groupedTimer.date.toString()} entries={groupedTimer.entries} projects={projects} />
+            {timers.map((group) => (
+                <TimerGroup
+                    key={group.date}
+                    date={group.date}
+                    entries={group.timers}
+                    projects={projects}
+                />
             ))}
 
             <div className="flex justify-end items-center mt-4 space-x-2">
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                    disabled={currentPage === 0}
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm font-medium">
-                    Page {currentPage} of {totalPages}
+                    Page {currentPage + 1} of {totalPages}
                 </span>
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                    disabled={currentPage === totalPages - 1}
                 >
                     <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -53,4 +57,4 @@ export function TimerList({ projects }: { projects: Project[] }) {
             <Toaster />
         </div>
     );
-} 
+}

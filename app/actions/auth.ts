@@ -1,7 +1,7 @@
 'use server'
 
 import AuthError from 'next-auth'
-export type AuthError = 'Invalid credentials' | 'Something went wrong' | 'Success' 
+export type AuthError = 'Invalid credentials' | 'Something went wrong' | 'Success'
 export async function authenticate(
     prevState: string | undefined,
     formData: FormData,
@@ -58,16 +58,16 @@ export async function login(email: string, password: string): Promise<{ status: 
         throw error;
     }
 }
-export async function reg(email: string, password: string,username:string): Promise<AuthError> {
+export async function reg(email: string, password: string, username: string): Promise<AuthError> {
     try {
-     const res = await  fetch('http://localhost:4000/auth/register', {
+        const res = await fetch('http://localhost:4000/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password,username }),
+            body: JSON.stringify({ email, password, username }),
         })
-        if(res.ok){
-        return 'Success'
-        }else{
+        if (res.ok) {
+            return 'Success'
+        } else {
             return 'Invalid credentials'
         }
     } catch (error) {
@@ -84,3 +84,26 @@ export async function reg(email: string, password: string,username:string): Prom
     }
 }
 
+
+export const cuUser = async (token: string) => {
+    try {
+        const res = await fetch('http://localhost:4000/auth/me', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        }
+        )
+
+
+    }
+    catch (error) {
+        if (error instanceof AuthError) {
+            switch (error) {
+                case 'CredentialsSignin':
+                    return 'Invalid credentials'
+                default:
+                    return 'Something went wrong'
+            }
+        }
+        throw error
+    }
+}
