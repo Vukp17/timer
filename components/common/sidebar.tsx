@@ -38,6 +38,17 @@ export function Sidebar() {
     const [isCollapsed, setIsCollapsed] = React.useState(false)
     const pathname = usePathname()
 
+    React.useEffect(() => {
+        const savedState = localStorage.getItem('sidebar-collapsed')
+        if (savedState !== null) {
+            setIsCollapsed(JSON.parse(savedState))
+        }
+    }, [])
+
+    React.useEffect(() => {
+        localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed))
+    }, [isCollapsed])
+
     return (
         <TooltipProvider>
             <div className={cn(
@@ -77,13 +88,11 @@ export function Sidebar() {
                                                     "w-full justify-start",
                                                     pathname === item.href && "bg-muted",
                                                     isCollapsed && "justify-center"
-                                                )}
-                                            >
+                                                )}>
                                                 <Link href={item.href} className={cn("flex items-center", !isCollapsed ? "justify-start" : "justify-center")}>
                                                     <item.icon className="h-6 w-6 shrink-0" />
                                                     {!isCollapsed && <span className="ml-2">{item.label}</span>}
                                                 </Link>
-
                                             </Button>
                                         </TooltipTrigger>
                                         {isCollapsed && (
@@ -111,8 +120,7 @@ export function Sidebar() {
                                                     "w-full justify-start",
                                                     pathname === item.href && "bg-muted",
                                                     isCollapsed && "justify-center"
-                                                )}
-                                            >
+                                                )}>
                                                 <Link href={item.href} className={cn("flex items-center", !isCollapsed ? "justify-start" : "justify-center")}>
                                                     <item.icon className="h-6 w-6 shrink-0" />
                                                     {!isCollapsed && <span className="ml-2">{item.label}</span>}
