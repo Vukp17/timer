@@ -13,38 +13,61 @@ export const convertDurationToMinutes = (duration: string): number => {
 
 
 export function validateAndFormatTime(timeString: string): string | null {
-    const timeRegex = /^(\d{1,6})$/;
+    console.log(timeString);
+    const timeRegex = /^(\d{1,6})$/; // Matches 1 to 6 digits
+    const formattedTimeRegex = /^(\d{1,2}):(\d{2})(:(\d{2}))?$/; // Matches HH:MM or HH:MM:SS
+
     if (timeRegex.test(timeString)) {
         let hours = '00', minutes = '00', seconds = '00';
 
-        if (timeString.length === 2) {
-            // 21 -> 21:00:00
-            minutes = timeString.padStart(2, '0');
-        } else if (timeString.length === 3) {
-            // 321 -> 03:21:00
-            hours = '0' + timeString[0];
-            minutes = timeString.slice(1).padStart(2, '0');
-        } else if (timeString.length === 4) {
-            // 1122 -> 11:22:00
-            hours = timeString.slice(0, 2).padStart(2, '0');
-            minutes = timeString.slice(2).padStart(2, '0');
-        } else if (timeString.length === 5) {
-            // 11222 -> 01:12:22
-            hours = '0' + timeString[0];
-            minutes = timeString.slice(1, 3).padStart(2, '0');
-            seconds = timeString.slice(3).padStart(2, '0');
-        } else if (timeString.length === 6) {
-            // 112233 -> 11:22:33
-            hours = timeString.slice(0, 2).padStart(2, '0');
-            minutes = timeString.slice(2, 4).padStart(2, '0');
-            seconds = timeString.slice(4).padStart(2, '0');
+        switch (timeString.length) {
+            case 1:
+                // 1 -> 01:00:00
+                hours = timeString.padStart(2, '0');
+                break;
+            case 2:
+                // 21 -> 21:00:00
+                hours = timeString.padStart(2, '0');
+                break;
+            case 3:
+                // 321 -> 03:21:00
+                hours = timeString.slice(0, 1).padStart(2, '0');
+                minutes = timeString.slice(1).padStart(2, '0');
+                break;
+            case 4:
+                // 1122 -> 11:22:00
+                hours = timeString.slice(0, 2).padStart(2, '0');
+                minutes = timeString.slice(2).padStart(2, '0');
+                break;
+            case 5:
+                // 11222 -> 11:22:20
+                hours = timeString.slice(0, 2).padStart(2, '0');
+                minutes = timeString.slice(2, 4).padStart(2, '0');
+                seconds = timeString.slice(4).padStart(2, '0');
+                break;
+            case 6:
+                // 112233 -> 11:22:33
+                hours = timeString.slice(0, 2).padStart(2, '0');
+                minutes = timeString.slice(2, 4).padStart(2, '0');
+                seconds = timeString.slice(4).padStart(2, '0');
+                break;
         }
-
+        console.log(`${hours}:${minutes}:${seconds}`);
         return `${hours}:${minutes}:${seconds}`;
+    } else if (formattedTimeRegex.test(timeString)) {
+        const match = formattedTimeRegex.exec(timeString);
+        if (match) {
+            const hours = match[1].padStart(2, '0');
+            const minutes = match[2].padStart(2, '0');
+            const seconds = match[4] ? match[4].padStart(2, '0') : '00';
+            console.log(`${hours}:${minutes}:${seconds}`);
+            return `${hours}:${minutes}:${seconds}`;
+        }
     }
     return null;
 }
 export function combineDateAndTime(date: Date, timeString: string): Date {
+    console.log(timeString,"timeString");
     let timstr = validateAndFormatTime(timeString);
     if (!timstr) {
         throw new Error('Invalid time string');
