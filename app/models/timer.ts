@@ -10,6 +10,8 @@ export interface TimerCreate {
     tagId?: number | null
 }
 export interface Timer {
+    projectId?: number
+    tagId?: number
     id: number
     startTime?: Date
     endTime?: Date

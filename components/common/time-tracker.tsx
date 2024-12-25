@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { getAll } from "@/app/actions/project";
 import { Project } from "@/app/models/project";
 import { Tag } from "@/app/models/tag";
-import { createStart, updateOnStopTimer } from "@/app/actions/timer";
+import { createStart, updateOnStopTimer, getRunningTimer } from "@/app/actions/timer";
 import { toast } from "../ui/use-toast";
 
 export function TimeTracker() {
@@ -53,9 +53,14 @@ export function TimeTracker() {
         console.log("Timer created successfully");
         setCurrentTimerId(response.id.toString());
         setIsTracking(true);
-        toast({ title: "Success", description: "Timer started successfully" });
+        toast({ title: "Success", description: "Timer started successfully", duration: 5000, style: { background: "green", color: "white" } });
       });
     } else {
+      if (!selectedProject) {
+        toast({ title: "Error", description: "Please select a project before stopping the timer", style: { background: "red", color: "white" } });
+        return;
+      }
+
       if (isManualMode) {
         setEndTime(new Date().toISOString());
       } else {
@@ -117,6 +122,31 @@ export function TimeTracker() {
       setTags(data);
     };
     fetchTags();
+
+    const checkRunningTimer = async () => {
+      const runningTimer = await getRunningTimer();
+      if (runningTimer) {
+        console.log("Running timer found", runningTimer);
+        setIsTracking(true);
+        setCurrentTimerId(runningTimer.id.toString());
+        setDescription(runningTimer.description || "");
+        setSelectedProject(runningTimer.projectId ? runningTimer.projectId.toString() : "");
+        setSelectedTag(runningTimer.tagId ? runningTimer.tagId.toString() : "");
+
+        if (runningTimer.startTime) {
+          setStartTime(new Date(runningTimer.startTime).toISOString());
+          setTimerStart(new Date(runningTimer.startTime).getTime());
+        }
+
+        if (!isManualMode) {
+          const now = Date.now();
+          const start = runningTimer.startTime ? new Date(runningTimer.startTime).getTime() : Date.now();
+          const durationInSeconds = Math.floor((now - start) / 1000);
+          setDuration(formatDuration(durationInSeconds));
+        }
+      }
+    };
+    checkRunningTimer();
 
     let interval: NodeJS.Timeout;
     if (isTracking && !isManualMode) {
@@ -204,21 +234,6 @@ export function TimeTracker() {
               >
                 <DollarSign className="h-4 w-4" />
               </Toggle>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="mode-switch"
-                  checked={!isManualMode}
-                  onCheckedChange={(checked) => setIsManualMode(!checked)}
-                />
-                <Label htmlFor="mode-switch" className="sr-only">
-                  {isManualMode ? "Manual mode" : "Automatic mode"}
-                </Label>
-                {isManualMode ? (
-                  <Clock className="h-4 w-4" />
-                ) : (
-                  <StopCircle className="h-4 w-4" />
-                )}
-              </div>
               <Button onClick={handleStartStop}>
                 {isTracking ? (
                   <Square className="mr-2 h-4 w-4" />

@@ -27,7 +27,7 @@ export function createStart(data: TimerCreate): Promise<Timer> {
 
 export function updateOnStopTimer(data: TimerUpdate): Promise<Timer> {
     console.log(data);
-    const {id, ...result} = data;
+    const { id, ...result } = data;
     return fetch(API_URL + VIEW + "/" + data.id, {
         method: "PUT",
         headers: {
@@ -81,5 +81,30 @@ export async function getTimers(page: number, searchQuery?: string, sortField?: 
     } catch (error) {
         console.error('Error fetching client list:', error);
         throw error;
+    }
+}
+
+export async function getRunningTimer(): Promise<Timer> {
+    try {
+        const url = new URL(API_URL + VIEW + '/running');
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+        });
+        if (response.status === 401) {
+            window.location.href = '/login';
+            return { id: 0, startTime: new Date(), endTime: new Date(), description: '', duration: 0, projectId: 0, tagId: 0 };
+        }
+        if (!response.ok) {
+            throw new Error('Failed to fetch running timer');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching running timer:', error);
+        return { id: 0, startTime: new Date(), endTime: new Date(), description: '', duration: 0, projectId: 0, tagId: 0 };
     }
 }
