@@ -30,13 +30,16 @@ export function TimeTracker() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>("");
   const [currentTimerId, setCurrentTimerId] = useState<string | null>(null);
+  const [isStartTimeMenuOpen, setIsStartTimeMenuOpen] = useState(false);
 
   const handleStartStop = () => {
     if (!isTracking) {
+      const now = new Date();
       if (isManualMode) {
-        setStartTime(new Date().toISOString());
+        setStartTime(now.toISOString());
       } else {
-        setTimerStart(Date.now());
+        setTimerStart(now.getTime());
+        setStartTime(now.toISOString());
       }
 
       createStart({
@@ -119,12 +122,26 @@ export function TimeTracker() {
     if (isTracking && !isManualMode) {
       interval = setInterval(() => {
         const now = Date.now();
-        const durationInSeconds = Math.floor((now - (timerStart || 0)) / 1000);
+        const start = timerStart || now;
+        const durationInSeconds = Math.floor((now - start) / 1000);
         setDuration(formatDuration(durationInSeconds));
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isTracking, isManualMode, timerStart]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (isStartTimeMenuOpen && !(event.target as Element).closest('.duration-menu')) {
+        setIsStartTimeMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isStartTimeMenuOpen]);
 
   return (
     <div className="space-y-4">
@@ -152,31 +169,32 @@ export function TimeTracker() {
                 selectedTag={selectedTag}
                 onSelectTag={setSelectedTag}
               />
-              <div className="flex items-center space-x-2">
-                {isManualMode ? (
-                  <>
-                    <Input
-                      type="time"
-                      value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
-                      onChange={(e) => setStartTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
-                      className="w-24"
-                    />
-                    <span>-</span>
-                    <Input
-                      type="time"
-                      value={endTime ? endTime.split("T")[1].substring(0, 5) : ""}
-                      onChange={(e) => setEndTime(new Date().toISOString().split("T")[0] + "T" + e.target.value + ":00Z")}
-                      className="w-24"
-                    />
-                  </>
-                ) : (
-                  <Input
-                    type="text"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="00:00:00"
-                    className="w-24"
-                  />
+              <div className="relative">
+                <div
+                  className="flex items-center space-x-2 cursor-pointer"
+                  onClick={() => setIsStartTimeMenuOpen(!isStartTimeMenuOpen)}
+                >
+                  <div className="w-24 h-10 border rounded-md flex items-center justify-center">
+                    {duration || "00:00:00"}
+                  </div>
+                </div>
+                {isTracking && isStartTimeMenuOpen && (
+                  <div className="absolute top-full mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 duration-menu" onClick={(e) => e.stopPropagation()}>
+                    <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                      <Input
+                        type="time"
+                        value={startTime ? startTime.split('T')[1].substring(0, 5) : ''}
+                        onChange={(e) => {
+                          const newStartTime = new Date(timerStart || Date.now());
+                          const [hours, minutes] = e.target.value.split(':');
+                          newStartTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+                          setTimerStart(newStartTime.getTime());
+                          setStartTime(newStartTime.toISOString());
+                        }}
+                        className="w-full px-4 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
               <Toggle
@@ -213,6 +231,7 @@ export function TimeTracker() {
           </div>
         </CardContent>
       </Card>
+
       <TimerList projects={projects} />
     </div>
   );

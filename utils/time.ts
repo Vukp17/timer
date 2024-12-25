@@ -52,7 +52,6 @@ export function validateAndFormatTime(timeString: string): string | null {
                 seconds = timeString.slice(4).padStart(2, '0');
                 break;
         }
-        console.log(`${hours}:${minutes}:${seconds}`);
         return `${hours}:${minutes}:${seconds}`;
     } else if (formattedTimeRegex.test(timeString)) {
         const match = formattedTimeRegex.exec(timeString);

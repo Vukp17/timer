@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getTimers, updateOnStopTimer } from "@/app/actions/timer";
+import { getTimers, updateOnStopTimer, } from "@/app/actions/timer";
 import { GroupedTimers, Timer } from "@/app/models/timer";
 import { Project } from "@/app/models/project";
-import { Play, Square, ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon } from 'lucide-react';
+import { Play, Square, ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon, Trash2 } from 'lucide-react';
 import { ProjectMenu } from "./project-menu";
 import { debounce } from "@/utils/debounce";
 import { Toaster } from "../ui/toaster";
@@ -87,10 +87,11 @@ export function TimerList({ projects }: { projects: Project[] }) {
   };
 
   const handleSave = async (timerId: number, isGrouped: boolean = false, groupTimers: Timer[] = []) => {
-    const startTime = editedStartTimeString ? combineDateAndTime(new Date(), editedStartTimeString) : undefined;
-    const endTime = editedEndTimeString ? combineDateAndTime(new Date(), editedEndTimeString) : undefined;
-    const duration = editedDuration ? convertDurationToMinutes(editedDuration) : undefined;
     updateDuration();
+
+    const startTime = editedStartTimeString ? combineDateAndTime(new Date(currentEditingTimer?.startTime || Date.now()), editedStartTimeString) : undefined;
+    const endTime = editedEndTimeString ? combineDateAndTime(new Date(currentEditingTimer?.endTime || Date.now()), editedEndTimeString) : undefined;
+    const duration = editedDuration ? convertDurationToMinutes(editedDuration) : undefined;
 
     const updateData = {
       id: timerId,
@@ -152,8 +153,8 @@ export function TimerList({ projects }: { projects: Project[] }) {
     if (startTimeString && endTimeString) {
       const t1 = validateAndFormatTime(startTimeString);
       const t2 = validateAndFormatTime(endTimeString);
-      console.log('T end time',t2)
-      console.log('T start time',t1)
+      console.log('T end time', t2)
+      console.log('T start time', t1)
       if (t1 && t2) {
         const start = new Date(`1970-01-01T${t1}Z`);
         const end = new Date(`1970-01-01T${t2}Z`);
@@ -195,6 +196,30 @@ export function TimerList({ projects }: { projects: Project[] }) {
     }
   };
 
+  const handleDelete = async (timerId: number, isGrouped: boolean = false, groupTimers: Timer[] = []) => {
+    try {
+      // if (isGrouped) {
+      //   await Promise.all(groupTimers.map(timer => deleteTimer(timer.id)));
+      // } else {
+      //   await deleteTimer(timerId);
+      // }
+
+      const { groupedTimers } = await getTimers(currentPage);
+      setTimers(groupedTimers);
+
+      toast({
+        title: "Timer deleted",
+        description: "Your timer has been successfully deleted.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete the timer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderTimer = (timer: Timer | Timer[], isGrouped: boolean = false) => {
     const firstTimer = Array.isArray(timer) ? timer[0] : timer;
     const groupTimers = Array.isArray(timer) ? timer : [timer];
@@ -222,10 +247,18 @@ export function TimerList({ projects }: { projects: Project[] }) {
         />
         <ProjectMenu
           projects={projects}
-          selectedProject={isGrouped ? String(firstTimer.project?.id) : (editingTimerId === firstTimer.id ? String(editedProjectId) : String(firstTimer.project?.id))}
+          selectedProject={
+            isGrouped
+              ? String(firstTimer.project?.id)
+              : editingTimerId === firstTimer.id
+                ? String(editedProjectId)
+                : String(firstTimer.project?.id)
+          }
           onSelectProject={async (projectId) => {
+            console.log("Project ID", projectId);
             setEditedProjectId(Number(projectId));
-            await new Promise(resolve => setTimeout(resolve, 0)); // Ensure state is updated
+
+            await new Promise((resolve) => setTimeout(resolve, 0)); // Ensure state is updated
             if (isGrouped) {
               handleSave(firstTimer.id, true, groupTimers);
             } else {
@@ -235,7 +268,13 @@ export function TimerList({ projects }: { projects: Project[] }) {
         />
         <Input
           type="text"
-          value={editingTimerId === firstTimer.id ? editedStartTimeString : (firstTimer.startTime ? new Date(firstTimer.startTime).toTimeString().slice(0, 8) : "")}
+          value={
+            editingTimerId === firstTimer.id
+              ? editedStartTimeString
+              : firstTimer.startTime
+                ? new Date(firstTimer.startTime).toTimeString().slice(0, 8)
+                : ""
+          }
           onChange={(e) => {
             setEditedStartTimeString(e.target.value);
           }}
@@ -280,8 +319,9 @@ export function TimerList({ projects }: { projects: Project[] }) {
             setEditedDuration(e.target.value);
           }}
           value={convertMinutesToDuration(totalDuration)}
-          className="flex-1 min-w/[150px]"
+          className="flex-1 min-w-[150px]"
         />
+
         {isGrouped ? (
           <Button
             variant="ghost"
@@ -350,3 +390,4 @@ export function TimerList({ projects }: { projects: Project[] }) {
     </div>
   );
 }
+
