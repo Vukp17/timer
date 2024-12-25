@@ -76,7 +76,8 @@ export async function getTimers(page: number, searchQuery?: string, sortField?: 
         if (!response.ok) {
             throw new Error('Failed to fetch client list');
         }
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         return data;
     } catch (error) {
         console.error('Error fetching client list:', error);
@@ -101,7 +102,8 @@ export async function getRunningTimer(): Promise<Timer> {
         if (!response.ok) {
             throw new Error('Failed to fetch running timer');
         }
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
         return data;
     } catch (error) {
         console.error('Error fetching running timer:', error);

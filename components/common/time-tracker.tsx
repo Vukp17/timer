@@ -126,7 +126,7 @@ export function TimeTracker() {
     const checkRunningTimer = async () => {
       const runningTimer = await getRunningTimer();
       if (runningTimer) {
-        console.log("Running timer found", runningTimer);
+        console
         setIsTracking(true);
         setCurrentTimerId(runningTimer.id.toString());
         setDescription(runningTimer.description || "");
