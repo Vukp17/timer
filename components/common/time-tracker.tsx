@@ -242,11 +242,15 @@ export function TimeTracker() {
                         type="time"
                         value={startTime ? startTime.split('T')[1].substring(0, 5) : ''}
                         onChange={(e) => {
+                          console.log(e.target.value);
                           const newStartTime = new Date(timerStart || Date.now());
                           const [hours, minutes] = e.target.value.split(':');
                           newStartTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
                           setTimerStart(newStartTime.getTime());
                           setStartTime(newStartTime.toISOString());
+                          const durationInSeconds = Math.floor((Date.now() - newStartTime.getTime()) / 1000);
+                          console.log(durationInSeconds);
+                          setDuration(formatDuration(durationInSeconds));
                         }}
                         className="w-full px-4 py-2 text-sm"
                       />
