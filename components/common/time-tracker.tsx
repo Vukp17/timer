@@ -61,8 +61,9 @@ export function TimeTracker() {
         return;
       }
 
+      const now = new Date();
       if (isManualMode) {
-        setEndTime(new Date().toISOString());
+        setEndTime(now.toISOString());
       } else {
         const endTime = Date.now();
         const durationInSeconds = Math.floor((endTime - (timerStart || 0)) / 1000);
@@ -72,7 +73,7 @@ export function TimeTracker() {
 
       updateOnStopTimer({
         id: currentTimerId ? parseInt(currentTimerId) : 0,
-        endTime: new Date(),
+        endTime: now,
         duration: isManualMode ? undefined : parseInt(duration),
       }).then(() => {
         toast({ title: "Success", description: "Timer stopped successfully" });
@@ -88,6 +89,27 @@ export function TimeTracker() {
       });
     }
   };
+  const updateProject = (projectId: string) => {
+    if (isTracking && currentTimerId) {
+
+      updateOnStopTimer({
+        id: currentTimerId ? parseInt(currentTimerId) : 0,
+        projectId: parseInt(projectId),
+      }).then(() => {
+        toast({ title: "Success", description: "Timer updated successfully" });
+      });
+    }
+  }
+  const updateTag = (tagId: string) => {
+    if (isTracking && currentTimerId) {
+      updateOnStopTimer({
+        id: currentTimerId ? parseInt(currentTimerId) : 0,
+        tagId: parseInt(tagId),
+      }).then(() => {
+        toast({ title: "Success", description: "Timer updated successfully" });
+      });
+    }
+  }
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -102,8 +124,10 @@ export function TimeTracker() {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
         id: parseInt(currentTimerId),
-        endTime: new Date(),
         duration: isManualMode ? undefined : parseInt(duration),
+        description: description,
+        projectId: parseInt(selectedProject),
+        tagId: parseInt(selectedTag),
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" });
       });
@@ -191,13 +215,16 @@ export function TimeTracker() {
                 selectedProject={selectedProject}
                 onSelectProject={(project) => {
                   setSelectedProject(project);
-                  handleBlurOrProjectChange();
+                  updateProject(project);
                 }}
               />
               <TagMenu
                 tags={tags}
                 selectedTag={selectedTag}
-                onSelectTag={setSelectedTag}
+                onSelectTag={(tag) => {
+                  setSelectedTag(tag);
+                  updateTag(tag);
+                }}
               />
               <div className="relative">
                 <div
