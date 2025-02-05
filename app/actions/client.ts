@@ -1,136 +1,63 @@
 import { Client, ClientCreate } from "../models/client";
+import api from "@/lib/apiClient";
 
-const API_URL = process.env.API_URL || "http://localhost:4000";
-const VIEW = '/client';
+const VIEW = "/client";
 
-export async function getClientList(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<Client[]> {
+export async function getClientList(
+    page: number,
+    searchQuery?: string,
+    sortField?: string,
+    sortOrder: string = "asc",
+    numberOfItems: number = 10
+): Promise<Client[]> {
     try {
-        const url = new URL(API_URL + VIEW);
-        url.searchParams.append('page', page.toString());
-        url.searchParams.append('pageSize', numberOfItems.toString());
+        const params = {
+            page,
+            pageSize: numberOfItems,
+            ...(searchQuery && { search: searchQuery }),
+            ...(sortField && { sortField, sortOrder }),
+        };
 
-        if (searchQuery) {
-            url.searchParams.append('search', searchQuery);
-        }
-        if (sortField) {
-            url.searchParams.append('sortField', sortField);
-            url.searchParams.append('sortOrder', sortOrder);
-        }
-
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return [];
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch client list');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching client list:', error);
+        return (await api.get<Client[]>(`${VIEW}`, { params })).data;
+    } catch (error: any) {
+        console.error("Error fetching client list:", error.message);
         throw error;
     }
 }
 
 export async function create(client: ClientCreate): Promise<Client> {
     try {
-        const response = await fetch(API_URL + VIEW, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(client),
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to create client');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error creating client:', error);
+        return (await api.post<Client>(`${VIEW}`, client)).data;
+    } catch (error: any) {
+        console.error("Error creating client:", error.message);
         throw error;
     }
 }
 
 export async function update(client: Client): Promise<Client> {
     try {
-        const response = await fetch(API_URL + VIEW + `/${client.id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(client),
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to update client');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error updating client:', error);
+        const response = await api.put<Client>(`${VIEW}/${client.id}`, client);
+        return response.data;
+    } catch (error: any) {
+        console.error("Error updating client:", error.message);
         throw error;
     }
 }
 
-export async function remove(client: Client): Promise<void> {
+export async function remove(clientId: string): Promise<void> {
     try {
-        const response = await fetch(API_URL + VIEW + `/${client.id}`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to delete client');
-        }
-    } catch (error) {
-        console.error('Error deleting client:', error);
+        await api.delete(`${VIEW}/${clientId}`);
+    } catch (error: any) {
+        console.error("Error deleting client:", error.message);
         throw error;
     }
 }
 
 export async function getAll(): Promise<Client[]> {
     try {
-        const response = await fetch(API_URL + VIEW + '/all', {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return [];
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch client list');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching client list:', error);
+        return (await api.get<Client[]>(`${VIEW}/all`)).data;
+    } catch (error: any) {
+        console.error("Error fetching all clients:", error.message);
         throw error;
     }
 }

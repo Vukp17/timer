@@ -1,123 +1,63 @@
 import { Project, ProjectCreate } from "../models/project";
-const API_URL = process.env.API_URL || "http://localhost:4000";
-const VIEW = '/project';
+import api from "@/lib/apiClient";
 
+const VIEW = "/project";
 
-export async function getProjectList(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10) {
+export async function getProjectList(
+    page: number,
+    searchQuery?: string,
+    sortField?: string,
+    sortOrder: string = "asc",
+    numberOfItems: number = 10
+): Promise<Project[]> {
     try {
-        const url = new URL(API_URL + VIEW);
-        url.searchParams.append('page', page.toString());
-        url.searchParams.append('pageSize', numberOfItems.toString());
+        const params = {
+            page,
+            pageSize: numberOfItems,
+            ...(searchQuery && { search: searchQuery }),
+            ...(sortField && { sortField, sortOrder }),
+        };
 
-        if (searchQuery) {
-            url.searchParams.append('search', searchQuery);
-        }
-        if (sortField) {
-            url.searchParams.append('sortField', sortField);
-            url.searchParams.append('sortOrder', sortOrder);
-        }
-
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return [];
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch client list');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching client list:', error);
+        return (await api.get<Project[]>(`${VIEW}`, { params })).data;
+    } catch (error: any) {
+        console.error("Error fetching project list:", error.message);
         throw error;
     }
 }
 
-
-
-export async function createProject(project: ProjectCreate) {
+export async function createProject(project: ProjectCreate): Promise<Project> {
     try {
-        const response = await fetch("http://localhost:4000/project", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(project),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to create project');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error creating project:', error);
+        return (await api.post<Project>(`${VIEW}`, project)).data;
+    } catch (error: any) {
+        console.error("Error creating project:", error.message);
         throw error;
     }
 }
-export async function updateProject(project: Project) {
-    try {
-        const response = await fetch("http://localhost:4000/project/" + project.id, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(project),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to update project');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error updating project:', error);
-        throw error;
-    }
-}
-export async function deleteProject(project: Project) {
-    try {
-        const response = await fetch("http://localhost:4000/project", {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(project),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to delete project');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error deleting project:', error);
-        throw error;
-    }
 
-}
-export async function getAll():Promise<Project[]> {
+export async function updateProject(project: Project): Promise<Project> {
     try {
-        const response = await fetch(API_URL + VIEW + "/all", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch clients');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error fetching clients:', error);
+        const response = await api.put<Project>(`${VIEW}/${project.id}`, project);
+        return response.data;
+    } catch (error: any) {
+        console.error("Error updating project:", error.message);
+        throw error;
+    }
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+    try {
+        await api.delete(`${VIEW}/${projectId}`);
+    } catch (error: any) {
+        console.error("Error deleting project:", error.message);
+        throw error;
+    }
+}
+
+export async function getAllProjects(): Promise<Project[]> {
+    try {
+        return (await api.get<Project[]>(`${VIEW}/all`)).data;
+    } catch (error: any) {
+        console.error("Error fetching all projects:", error.message);
         throw error;
     }
 }
