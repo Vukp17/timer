@@ -4,7 +4,7 @@
 'use client'
 
 import { SetStateAction, useEffect, useState } from 'react'
-import { PlusCircle } from 'lucide-react'
+import { Briefcase, PlusCircle } from 'lucide-react'
 import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/common/data-table"
@@ -13,6 +13,8 @@ import { Column } from '@/models/data-table'
 import { Layout } from '@/components/common/layout'
 import { Client, ClientCreate } from '../models/client'
 import { create, getClientList, remove, update } from '../actions/client'
+import { EmptyStateModular } from '@/components/common/empty-states/empty-state-modular'
+import { PersonIcon } from '@radix-ui/react-icons'
 
 
 
@@ -157,6 +159,9 @@ return (
                 <PlusCircle size={24} className="mr-2" /> New Client
             </Button>
         </div>
+        {clients.length > 0 ? (
+
+        
         <DataTable
             data={clients}
             columns={clientColumns}
@@ -173,6 +178,12 @@ return (
             onPageChange={handlePageChange}
 
         />
+        ) : (
+            <EmptyStateModular
+                title="No Clients Yet"
+                description="Create a new client by clicking the New Client button above."
+                Icon={Briefcase}/>
+        )}
         <CrudModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}

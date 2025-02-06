@@ -13,7 +13,7 @@ import type { Project } from "@/app/models/project"
 import type { Tag } from "@/app/models/tag"
 import { createStart, updateOnStopTimer, getRunningTimer } from "@/app/actions/timer"
 import { toast } from "../ui/use-toast"
-import { EmptyState } from "./empty-state"
+import { EmptyState } from "./empty-states/empty-state-timer"
 
 export function TimeTracker() {
   const [description, setDescription] = useState("")
