@@ -1,66 +1,65 @@
-import { useState, useEffect } from "react";
-import { DollarSign, Play, Square, Clock, StopCircle } from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { ProjectMenu } from "./project-menu";
-import { TagMenu } from "./tag-menu";
-import { TimerList } from "./timer-list";
-import { getaAllTags } from "@/app/actions/tags";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { getAllProjects } from "@/app/actions/project";
-import { Project } from "@/app/models/project";
-import { Tag } from "@/app/models/tag";
-import { createStart, updateOnStopTimer, getRunningTimer } from "@/app/actions/timer";
-import { toast } from "../ui/use-toast";
+import { useState, useEffect } from "react"
+import { DollarSign, Play, Square } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Toggle } from "@/components/ui/toggle"
+import { ProjectMenu } from "./project-menu"
+import { TagMenu } from "./tag-menu"
+import { TimerList } from "./timer-list"
+import { getaAllTags } from "@/app/actions/tags"
+import { getAllProjects } from "@/app/actions/project"
+import type { Project } from "@/app/models/project"
+import type { Tag } from "@/app/models/tag"
+import { createStart, updateOnStopTimer, getRunningTimer } from "@/app/actions/timer"
+import { toast } from "../ui/use-toast"
+import { EmptyState } from "./empty-state"
 
 export function TimeTracker() {
-  const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [endTime, setEndTime] = useState<string | null>(null);
-  const [duration, setDuration] = useState("");
-  const [isBillable, setIsBillable] = useState(false);
-  const [isTracking, setIsTracking] = useState(false);
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [timerStart, setTimerStart] = useState<number | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>("");
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string>("");
-  const [currentTimerId, setCurrentTimerId] = useState<string | null>(null);
-  const [isStartTimeMenuOpen, setIsStartTimeMenuOpen] = useState(false);
-  const [isManualStartTime, setIsManualStartTime] = useState(false);
+  const [description, setDescription] = useState("")
+  const [startTime, setStartTime] = useState<string | null>(null)
+  const [endTime, setEndTime] = useState<string | null>(null)
+  const [duration, setDuration] = useState("")
+  const [isBillable, setIsBillable] = useState(false)
+  const [isTracking, setIsTracking] = useState(false)
+  const [isManualMode, setIsManualMode] = useState(false)
+  const [timerStart, setTimerStart] = useState<number | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProject, setSelectedProject] = useState<string>("")
+  const [tags, setTags] = useState<Tag[]>([])
+  const [selectedTag, setSelectedTag] = useState<string>("")
+  const [currentTimerId, setCurrentTimerId] = useState<string | null>(null)
+  const [isStartTimeMenuOpen, setIsStartTimeMenuOpen] = useState(false)
+  const [isManualStartTime, setIsManualStartTime] = useState(false)
+  const [hasTimers, setHasTimers] = useState(false)
   const handleManualStartTimeBlur = () => {
-    setIsManualStartTime(false); // Resume interval updates
-  };
+    setIsManualStartTime(false) // Resume interval updates
+  }
 
   const handleManualStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsManualStartTime(true); // Pause interval updates temporarily
+    setIsManualStartTime(true) // Pause interval updates temporarily
 
-    const [hours, minutes] = e.target.value.split(':');
-    const updatedStartTime = new Date(timerStart || Date.now());
-    updatedStartTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+    const [hours, minutes] = e.target.value.split(":")
+    const updatedStartTime = new Date(timerStart || Date.now())
+    updatedStartTime.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10))
 
-    setTimerStart(updatedStartTime.getTime());
-    setStartTime(updatedStartTime.toISOString());
-    console.log(updatedStartTime,"TEST")
+    setTimerStart(updatedStartTime.getTime())
+    setStartTime(updatedStartTime.toISOString())
+    console.log(updatedStartTime, "TEST")
 
-    const durationInSeconds = Math.floor((Date.now() - updatedStartTime.getTime()) / 1000);
+    const durationInSeconds = Math.floor((Date.now() - updatedStartTime.getTime()) / 1000)
     console.log(duration)
-    setDuration(formatDuration(durationInSeconds));
-  };
-
+    setDuration(formatDuration(durationInSeconds))
+  }
 
   const handleStartStop = () => {
     if (!isTracking) {
-      const now = new Date();
+      const now = new Date()
       if (isManualMode) {
-        setStartTime(now.toISOString());
+        setStartTime(now.toISOString())
       } else {
-        setTimerStart(now.getTime());
-        setStartTime(now.toISOString());
+        setTimerStart(now.getTime())
+        setStartTime(now.toISOString())
       }
 
       createStart({
@@ -68,157 +67,169 @@ export function TimeTracker() {
         endTime: null,
         duration: undefined,
         description,
-        projectId: parseInt(selectedProject),
-        tagId: parseInt(selectedTag),
+        projectId: Number.parseInt(selectedProject),
+        tagId: Number.parseInt(selectedTag),
       }).then((response) => {
-        console.log("Timer created successfully");
-        setCurrentTimerId(response.id.toString());
-        setIsTracking(true);
-        toast({ title: "Success", description: "Timer started successfully", duration: 5000, style: { background: "green", color: "white" } });
-      });
+        console.log("Timer created successfully")
+        setCurrentTimerId(response.id.toString())
+        setIsTracking(true)
+        setHasTimers(true)
+        toast({
+          title: "Success",
+          description: "Timer started successfully",
+          duration: 5000,
+          style: { background: "green", color: "white" },
+        })
+      })
     } else {
       if (!selectedProject) {
-        toast({ title: "Error", description: "Please select a project before stopping the timer", style: { background: "red", color: "white" } });
-        return;
+        toast({
+          title: "Error",
+          description: "Please select a project before stopping the timer",
+          style: { background: "red", color: "white" },
+        })
+        return
       }
 
-      const now = new Date();
+      const now = new Date()
       if (isManualMode) {
-        setEndTime(now.toISOString());
+        setEndTime(now.toISOString())
       } else {
-        const endTime = Date.now();
-        const durationInSeconds = Math.floor((endTime - (timerStart || 0)) / 1000);
-        setDuration(formatDuration(durationInSeconds));
-        setTimerStart(null);
+        const endTime = Date.now()
+        const durationInSeconds = Math.floor((endTime - (timerStart || 0)) / 1000)
+        setDuration(formatDuration(durationInSeconds))
+        setTimerStart(null)
       }
 
       updateOnStopTimer({
-        id: currentTimerId ? parseInt(currentTimerId) : 0,
+        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
         endTime: now,
-        duration: isManualMode ? undefined : parseInt(duration),
+        duration: isManualMode ? undefined : Number.parseInt(duration),
       }).then(() => {
-        toast({ title: "Success", description: "Timer stopped successfully" });
-        setIsTracking(false);
-        setCurrentTimerId(null);
+        toast({ title: "Success", description: "Timer stopped successfully" })
+        setIsTracking(false)
+        setCurrentTimerId(null)
         // Reset fields
-        setDescription("");
-        setSelectedProject("");
-        setSelectedTag("");
-        setStartTime(null);
-        setEndTime(null);
-        setDuration("");
-      });
+        setDescription("")
+        setSelectedProject("")
+        setSelectedTag("")
+        setStartTime(null)
+        setEndTime(null)
+        setDuration("")
+      })
     }
-  };
+  }
   const updateProject = (projectId: string) => {
     if (isTracking && currentTimerId) {
-
       updateOnStopTimer({
-        id: currentTimerId ? parseInt(currentTimerId) : 0,
-        projectId: parseInt(projectId),
+        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
+        projectId: Number.parseInt(projectId),
       }).then(() => {
-        toast({ title: "Success", description: "Timer updated successfully" });
-      });
+        toast({ title: "Success", description: "Timer updated successfully" })
+      })
     }
   }
   const updateTag = (tagId: string) => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: currentTimerId ? parseInt(currentTimerId) : 0,
-        tagId: parseInt(tagId),
+        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
+        tagId: Number.parseInt(tagId),
       }).then(() => {
-        toast({ title: "Success", description: "Timer updated successfully" });
-      });
+        toast({ title: "Success", description: "Timer updated successfully" })
+      })
     }
   }
 
   const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const remainingSeconds = seconds % 60
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
-      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
+      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`
+  }
 
   const handleBlurOrProjectChange = () => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: parseInt(currentTimerId),
-        duration: isManualMode ? undefined : parseInt(duration),
+        id: Number.parseInt(currentTimerId),
+        duration: isManualMode ? undefined : Number.parseInt(duration),
         description: description,
-        projectId: parseInt(selectedProject),
-        tagId: parseInt(selectedTag),
+        projectId: Number.parseInt(selectedProject),
+        tagId: Number.parseInt(selectedTag),
       }).then(() => {
-        toast({ title: "Success", description: "Timer updated successfully" });
-      });
+        toast({ title: "Success", description: "Timer updated successfully" })
+      })
     }
-  };
+  }
 
   useEffect(() => {
     const fetchProjects = async () => {
-      const data = await getAllProjects();
-      setProjects(data);
-    };
-    fetchProjects();
+      const data = await getAllProjects()
+      setProjects(data)
+    }
+    fetchProjects()
 
     const fetchTags = async () => {
-      const data = await getaAllTags();
-      setTags(data);
-    };
-    fetchTags();
+      const data = await getaAllTags()
+      setTags(data)
+    }
+    fetchTags()
 
     const checkRunningTimer = async () => {
-      const runningTimer = await getRunningTimer();
+      const runningTimer = await getRunningTimer()
       if (runningTimer) {
         console
-        setIsTracking(true);
-        setCurrentTimerId(runningTimer.id.toString());
-        setDescription(runningTimer.description || "");
-        setSelectedProject(runningTimer.projectId ? runningTimer.projectId.toString() : "");
-        setSelectedTag(runningTimer.tagId ? runningTimer.tagId.toString() : "");
+        setIsTracking(true)
+        setCurrentTimerId(runningTimer.id.toString())
+        setDescription(runningTimer.description || "")
+        setSelectedProject(runningTimer.projectId ? runningTimer.projectId.toString() : "")
+        setSelectedTag(runningTimer.tagId ? runningTimer.tagId.toString() : "")
+        setHasTimers(true)
 
         if (runningTimer.startTime) {
-          setStartTime(new Date(runningTimer.startTime).toISOString());
-          setTimerStart(new Date(runningTimer.startTime).getTime());
+          setStartTime(new Date(runningTimer.startTime).toISOString())
+          setTimerStart(new Date(runningTimer.startTime).getTime())
         }
 
         if (!isManualMode) {
-          const now = Date.now();
-          const start = runningTimer.startTime ? new Date(runningTimer.startTime).getTime() : Date.now();
-          const durationInSeconds = Math.floor((now - start) / 1000);
-          setDuration(formatDuration(durationInSeconds));
+          const now = Date.now()
+          const start = runningTimer.startTime ? new Date(runningTimer.startTime).getTime() : Date.now()
+          const durationInSeconds = Math.floor((now - start) / 1000)
+          setDuration(formatDuration(durationInSeconds))
         }
+      } else {
+        setHasTimers(false)
       }
-    };
-    checkRunningTimer();
+    }
+    checkRunningTimer()
 
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout
 
     if (isTracking && !isManualMode && !isManualStartTime) {
       interval = setInterval(() => {
-        const now = Date.now();
-        const start = timerStart || now;
-        const durationInSeconds = Math.floor((now - start) / 1000);
-        setDuration(formatDuration(durationInSeconds));
-      }, 1000);
+        const now = Date.now()
+        const start = timerStart || now
+        const durationInSeconds = Math.floor((now - start) / 1000)
+        setDuration(formatDuration(durationInSeconds))
+      }, 1000)
     }
 
-    return () => clearInterval(interval);
-  }, [isTracking, isManualMode, timerStart, isManualStartTime]);
+    return () => clearInterval(interval)
+  }, [isTracking, isManualMode, timerStart, isManualStartTime])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (isStartTimeMenuOpen && !(event.target as Element).closest('.duration-menu')) {
-        setIsStartTimeMenuOpen(false);
+      if (isStartTimeMenuOpen && !(event.target as Element).closest(".duration-menu")) {
+        setIsStartTimeMenuOpen(false)
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isStartTimeMenuOpen]);
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isStartTimeMenuOpen])
 
   return (
     <div className="space-y-4">
@@ -237,16 +248,16 @@ export function TimeTracker() {
                 projects={projects}
                 selectedProject={selectedProject}
                 onSelectProject={(project) => {
-                  setSelectedProject(project);
-                  updateProject(project);
+                  setSelectedProject(project)
+                  updateProject(project)
                 }}
               />
               <TagMenu
                 tags={tags}
                 selectedTag={selectedTag}
                 onSelectTag={(tag) => {
-                  setSelectedTag(tag);
-                  updateTag(tag);
+                  setSelectedTag(tag)
+                  updateTag(tag)
                 }}
               />
               <div className="relative">
@@ -259,33 +270,27 @@ export function TimeTracker() {
                   </div>
                 </div>
                 {isTracking && isStartTimeMenuOpen && (
-                  <div className="absolute top-full mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 duration-menu" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="absolute top-full mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 duration-menu"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                       <Input
                         type="time"
-                        value={startTime ? startTime.split('T')[1].substring(0, 5) : ''}
+                        value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
                         onChange={handleManualStartTimeChange}
                         onBlur={handleManualStartTimeBlur}
                         className="w-full px-4 py-2 text-sm"
                       />
-
                     </div>
                   </div>
                 )}
               </div>
-              <Toggle
-                aria-label="Toggle billable"
-                pressed={isBillable}
-                onPressedChange={setIsBillable}
-              >
+              <Toggle aria-label="Toggle billable" pressed={isBillable} onPressedChange={setIsBillable}>
                 <DollarSign className="h-4 w-4" />
               </Toggle>
               <Button onClick={handleStartStop}>
-                {isTracking ? (
-                  <Square className="mr-2 h-4 w-4" />
-                ) : (
-                  <Play className="mr-2 h-4 w-4" />
-                )}
+                {isTracking ? <Square className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                 {isTracking ? "Stop" : "Start"}
               </Button>
             </div>
@@ -293,7 +298,8 @@ export function TimeTracker() {
         </CardContent>
       </Card>
 
-      <TimerList projects={projects} />
+      {hasTimers ? <TimerList projects={projects} /> : <EmptyState />}
     </div>
-  );
+  )
 }
+

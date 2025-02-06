@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import Router from 'next/router'; // Assuming you're using Next.js for routing
+import Router from 'next/router';
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 
@@ -10,15 +10,28 @@ interface ApiResponse<T> {
     errors?: any[];
 }
 
+// Create an axios instance without Authorization header initially
 const api = axios.create({
-    baseURL: API_URL, // Adjust based on your API URL
-    headers: { 'Content-Type': 'application/json' },
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
-// Interceptor to normalize responses
+// Request Interceptor to add token dynamically
+api.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token'); // Only access localStorage on client-side
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+});
+
+// Response Interceptor
 api.interceptors.response.use(
     (response: AxiosResponse<ApiResponse<any>>) => {
-        console.log('API response:', response.data);
         if (response.data.status === 'success') {
             return response.data.data; // Only return data
         }
@@ -26,11 +39,13 @@ api.interceptors.response.use(
     },
     (error: AxiosError) => {
         console.error('API error:', error);
-        Router.push('/login'); // Redirect to login page
-
         const responseData = error.response?.data as ApiResponse<any>;
+
         if (responseData?.status === 'error' && responseData?.message === 'Unauthorized') {
-            Router.push('/login'); // Redirect to login page
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('token'); // Remove invalid token
+                Router.push('/login'); // Redirect to login page
+            }
         }
         return Promise.reject(responseData || { status: 'error', message: 'Unknown error' });
     }

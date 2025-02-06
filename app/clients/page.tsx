@@ -79,7 +79,7 @@ export default function ClientManagement() {
     }
     const handleDeleteClient = async() => {
         if (!currentClient) return
-        const response = await remove(currentClient);  
+        const response = await remove(currentClient.id);  
         setClients(clients.filter(p => p.id !== currentClient.id))
         setIsDeleteModalOpen(false)
         toast({
@@ -105,6 +105,7 @@ export default function ClientManagement() {
         setSortField(column)
         setSortOrder(direction)
         getClientList(page,searchTerm,column,direction).then((data) => {
+            console.log(data)
             if (data !== undefined) {
                 setClients(data)
             } else {

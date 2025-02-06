@@ -44,7 +44,7 @@ export async function updateProject(project: Project): Promise<Project> {
     }
 }
 
-export async function deleteProject(projectId: string): Promise<void> {
+export async function deleteProject(projectId: number): Promise<void> {
     try {
         await api.delete(`${VIEW}/${projectId}`);
     } catch (error: any) {

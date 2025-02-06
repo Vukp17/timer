@@ -17,8 +17,8 @@ export async function getClientList(
             ...(searchQuery && { search: searchQuery }),
             ...(sortField && { sortField, sortOrder }),
         };
-
-        return (await api.get<Client[]>(`${VIEW}`, { params })).data;
+        const data = (await api.get<Client[]>(`${VIEW}`, { params })).data;
+        return data;
     } catch (error: any) {
         console.error("Error fetching client list:", error.message);
         throw error;
@@ -44,7 +44,7 @@ export async function update(client: Client): Promise<Client> {
     }
 }
 
-export async function remove(clientId: string): Promise<void> {
+export async function remove(clientId: number): Promise<void> {
     try {
         await api.delete(`${VIEW}/${clientId}`);
     } catch (error: any) {

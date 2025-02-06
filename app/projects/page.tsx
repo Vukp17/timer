@@ -115,7 +115,7 @@ export default function ProjectManagement() {
 
     const handleDeleteProject = async () => {
         if (!currentProject) return
-        await deleteProject(currentProject)
+        await deleteProject(currentProject.id)
         setProjects(projects.filter(p => p.id !== currentProject.id))
         setIsDeleteModalOpen(false)
         toast({
