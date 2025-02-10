@@ -11,7 +11,7 @@ import { getaAllTags } from "@/app/actions/tags"
 import { getAllProjects } from "@/app/actions/project"
 import type { Project } from "@/app/models/project"
 import type { Tag } from "@/app/models/tag"
-import { createStart, updateOnStopTimer, getRunningTimer } from "@/app/actions/timer"
+import { createStart, updateOnStopTimer, getRunningTimer, getTimers } from "@/app/actions/timer"
 import { toast } from "../ui/use-toast"
 import { EmptyState } from "./empty-states/empty-state-timer"
 
@@ -105,7 +105,7 @@ export function TimeTracker() {
         id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
         endTime: now,
         duration: isManualMode ? undefined : Number.parseInt(duration),
-      }).then(() => {
+      }).then((data) => {
         toast({ title: "Success", description: "Timer stopped successfully" })
         setIsTracking(false)
         setCurrentTimerId(null)
@@ -176,10 +176,10 @@ export function TimeTracker() {
     }
     fetchTags()
 
-    const checkRunningTimer = async () => {
+    const checkTimers = async () => {
+      // First check for running timer
       const runningTimer = await getRunningTimer()
       if (runningTimer) {
-        console
         setIsTracking(true)
         setCurrentTimerId(runningTimer.id.toString())
         setDescription(runningTimer.description || "")
@@ -198,11 +198,18 @@ export function TimeTracker() {
           const durationInSeconds = Math.floor((now - start) / 1000)
           setDuration(formatDuration(durationInSeconds))
         }
+      }
+
+      // Check for any existing timers
+      const { groupedTimers, totalCount } = await getTimers(0)
+      if (groupedTimers && groupedTimers.length > 0) {
+        setHasTimers(true)
       } else {
         setHasTimers(false)
       }
     }
-    checkRunningTimer()
+    
+    checkTimers()
 
     let interval: NodeJS.Timeout
 

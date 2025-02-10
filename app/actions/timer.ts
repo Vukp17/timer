@@ -1,112 +1,67 @@
 import { TimerCreate, Timer, TimerResponse, TimerUpdate } from "../models/timer";
+import api from "@/lib/apiClient";
 
-const API_URL = process.env.API_URL || "http://localhost:4000";
 const VIEW = '/timer';
 
-export function createStart(data: TimerCreate): Promise<Timer> {
-    return fetch(API_URL + VIEW, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(data),
-    })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('Failed to create timer');
-            }
-            return response.json();
-        })
-        .catch((error) => {
-            console.error('Error creating timer:', error);
-            throw error;
-        });
-
-}
-
-export function updateOnStopTimer(data: TimerUpdate): Promise<Timer> {
-    console.log(data);
-    const { id, ...result } = data;
-    return fetch(API_URL + VIEW + "/" + data.id, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(result),
-    })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('Failed to update timer');
-            }
-            return response.json();
-        })
-        .catch((error) => {
-            console.error('Error updating timer:', error);
-            throw error;
-        });
-}
-
-export async function getTimers(page: number, searchQuery?: string, sortField?: string, sortOrder: string = 'asc', numberOfItems: number = 10): Promise<TimerResponse> {
+export async function createStart(data: TimerCreate): Promise<Timer> {
     try {
-        const url = new URL(API_URL + VIEW);
-        url.searchParams.append('page', page.toString());
-        url.searchParams.append('pageSize', numberOfItems.toString());
+        const { data: responseData } = await api.post<Timer>(VIEW, data);
+        return responseData;
+    } catch (error: any) {
+        console.error('Error creating timer:', error.message);
+        throw error;
+    }
+}
 
-        if (searchQuery) {
-            url.searchParams.append('search', searchQuery);
-        }
-        if (sortField) {
-            url.searchParams.append('sortField', sortField);
-            url.searchParams.append('sortOrder', sortOrder);
-        }
+export async function updateOnStopTimer(data: TimerUpdate): Promise<Timer> {
+    try {
+        const { id, ...result } = data;
+        const { data: responseData } = await api.put<Timer>(`${VIEW}/${id}`, result);
+        return responseData;
+    } catch (error: any) {
+        console.error('Error updating timer:', error.message);
+        throw error;
+    }
+}
 
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return { groupedTimers: [], totalCount: 0 };
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch client list');
-        }
-        const text = await response.text();
-        const data = text ? JSON.parse(text) : {};
+export async function getTimers(
+    page: number,
+    searchQuery?: string,
+    sortField?: string,
+    sortOrder: string = 'asc',
+    numberOfItems: number = 10
+): Promise<TimerResponse> {
+    try {
+        const params = {
+            page,
+            pageSize: numberOfItems,
+            ...(searchQuery && { search: searchQuery }),
+            ...(sortField && { sortField, sortOrder }),
+        };
+
+        const { data } = await api.get<TimerResponse>(VIEW, { params });
         return data;
-    } catch (error) {
-        console.error('Error fetching client list:', error);
+    } catch (error: any) {
+        console.error('Error fetching timer list:', error.message);
         throw error;
     }
 }
 
 export async function getRunningTimer(): Promise<Timer> {
     try {
-        const url = new URL(API_URL + VIEW + '/running');
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-        });
-        if (response.status === 401) {
-            window.location.href = '/login';
-            return { id: 0, startTime: new Date(), endTime: new Date(), description: '', duration: 0, projectId: 0, tagId: 0 };
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch running timer');
-        }
-        const text = await response.text();
-        const data = text ? JSON.parse(text) : null;
+        const { data } = await api.get<Timer>(`${VIEW}/running`);
         return data;
-    } catch (error) {
-        console.error('Error fetching running timer:', error);
-        return { id: 0, startTime: new Date(), endTime: new Date(), description: '', duration: 0, projectId: 0, tagId: 0 };
+    } catch (error: any) {
+        console.error('Error fetching running timer:', error.message);
+        // Return default timer object on error
+        return {
+            id: 0,
+            startTime: new Date(),
+            endTime: new Date(),
+            description: '',
+            duration: 0,
+            projectId: 0,
+            tagId: 0
+        };
     }
 }
