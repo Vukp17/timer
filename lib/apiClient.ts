@@ -32,10 +32,12 @@ api.interceptors.request.use((config) => {
 // Response Interceptor
 api.interceptors.response.use(
     (response: AxiosResponse<ApiResponse<any>>) => {
+        console.log('API response:', response);
         if (response.data.status === 'success') {
-            return response.data.data; // Only return data
+            console.log('API data:', response.data);
+            return response.data as any; // Type assertion to bypass the strict typing
         }
-        return Promise.reject(response.data); // Forward errors
+        return Promise.reject(response.data);
     },
     (error: AxiosError) => {
         console.error('API error:', error);
@@ -43,8 +45,8 @@ api.interceptors.response.use(
 
         if (responseData?.status === 'error' && responseData?.message === 'Unauthorized') {
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('token'); // Remove invalid token
-                Router.push('/login'); // Redirect to login page
+                localStorage.removeItem('token');
+                Router.push('/login');
             }
         }
         return Promise.reject(responseData || { status: 'error', message: 'Unknown error' });

@@ -17,7 +17,8 @@ export async function getClientList(
             ...(searchQuery && { search: searchQuery }),
             ...(sortField && { sortField, sortOrder }),
         };
-        const data = (await api.get<Client[]>(`${VIEW}`, { params })).data;
+        const { data } = await api.get<Client[]>(`${VIEW}`, { params });
+        console.log("Client list:", data);
         return data;
     } catch (error: any) {
         console.error("Error fetching client list:", error.message);
@@ -27,7 +28,8 @@ export async function getClientList(
 
 export async function create(client: ClientCreate): Promise<Client> {
     try {
-        return (await api.post<Client>(`${VIEW}`, client)).data;
+        const { data } = await api.post<Client>(`${VIEW}`, client);
+        return data;
     } catch (error: any) {
         console.error("Error creating client:", error.message);
         throw error;
@@ -36,8 +38,8 @@ export async function create(client: ClientCreate): Promise<Client> {
 
 export async function update(client: Client): Promise<Client> {
     try {
-        const response = await api.put<Client>(`${VIEW}/${client.id}`, client);
-        return response.data;
+        const { data } = await api.put<Client>(`${VIEW}/${client.id}`, client);
+        return data;
     } catch (error: any) {
         console.error("Error updating client:", error.message);
         throw error;
@@ -55,9 +57,11 @@ export async function remove(clientId: number): Promise<void> {
 
 export async function getAll(): Promise<Client[]> {
     try {
-        return (await api.get<Client[]>(`${VIEW}/all`)).data;
+        const { data } = await api.get<Client[]>(`${VIEW}/all`);
+        return data;
     } catch (error: any) {
         console.error("Error fetching all clients:", error.message);
         throw error;
     }
+
 }

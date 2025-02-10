@@ -124,6 +124,7 @@ export default function ClientManagement() {
         console.log(page)
         getClientList(page,searchTerm,sortField,sortOrder,).then((data) => {
             if (data !== undefined) {
+                console.log('DADADAD')
                 setClients(data)
             } else {
                 setError('Failed to fetch projects')
@@ -137,6 +138,7 @@ export default function ClientManagement() {
     useEffect(() => {
         // fetch clients
         getClientList(page,searchTerm,sortField,sortOrder,).then((data) => {
+            console.log(data)
             if (data !== undefined) {
                 setClients(data)
             } else {
