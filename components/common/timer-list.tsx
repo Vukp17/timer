@@ -11,6 +11,8 @@ import { debounce } from "@/utils/debounce";
 import { Toaster } from "../ui/toaster";
 import { toast } from "@/components/ui/use-toast";
 import { convertDurationToMinutes, convertMinutesToDuration, combineDateAndTime, validateAndFormatTime } from "@/utils/time";
+import { parseDurationInput, formatTimeInput } from "@/utils/time-formatter";
+import { updateTimerTime, updateTimerDuration, startStopTimer } from "@/services/timer-service";
 
 export function TimerList({ projects }: { projects: Project[] }) {
   const [timers, setTimers] = useState<GroupedTimers[]>([]);
@@ -99,31 +101,13 @@ export function TimerList({ projects }: { projects: Project[] }) {
     }
   ) => {
     try {
-      if (isGrouped) {
-        // For grouped timers, update all timers maintaining their relative times
-        const firstTimer = groupTimers[0];
-        const originalStart = firstTimer.startTime ? new Date(firstTimer.startTime).getTime() : 0;
-        const timeShift = updates.startTime ? updates.startTime.getTime() - originalStart : 0;
+      // Find the correct timer based on whether it's grouped or not
+      const timer = isGrouped 
+        ? groupTimers.find(t => t.id === timerId) || groupTimers[0]
+        : { id: timerId }; // For individual timer, just pass the ID
 
-        await Promise.all(groupTimers.map(timer => {
-          const timerStart = timer.startTime ? new Date(timer.startTime).getTime() + timeShift : null;
-          const timerEnd = timer.endTime ? new Date(timer.endTime).getTime() + timeShift : null;
-
-          return updateOnStopTimer({
-            id: timer.id,
-            startTime: timerStart ? new Date(timerStart) : undefined,
-            endTime: timerEnd ? new Date(timerEnd) : undefined,
-            duration: updates.duration
-          });
-        }));
-      } else {
-        // For individual timer
-        await updateOnStopTimer({
-          id: timerId,
-          ...updates
-        });
-      }
-
+      await updateTimerTime(timer as Timer, updates, isGrouped, groupTimers);
+      
       // Refresh timer list
       const { groupedTimers } = await getTimers(currentPage);
       setTimers(groupedTimers);
@@ -133,6 +117,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
         description: "Timer(s) updated successfully",
       });
     } catch (error) {
+      console.error('Failed to update timer(s):', error);
       toast({
         title: "Error",
         description: "Failed to update timer(s)",
@@ -222,25 +207,18 @@ export function TimerList({ projects }: { projects: Project[] }) {
   };
 
   const handleStartStop = async (timer: Timer) => {
-    if (timer.endTime) {
-      // Start the timer
-      await updateOnStopTimer({
-        id: timer.id,
-        startTime: new Date(),
-        endTime: undefined,
-        duration: undefined,
-      });
-    } else {
-      // Stop the timer
-      await updateOnStopTimer({
-        id: timer.id,
-        startTime: timer.startTime ?? new Date(),
-        endTime: new Date(),
-        duration: undefined
+    try {
+      await startStopTimer(timer);
+      const { groupedTimers } = await getTimers(currentPage);
+      setTimers(groupedTimers);
+    } catch (error) {
+      console.error('Failed to start/stop timer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start/stop timer",
+        variant: "destructive",
       });
     }
-    const { groupedTimers } = await getTimers(currentPage);
-    setTimers(groupedTimers);
   };
 
   const handleBlur = (timerId: number, isGrouped: boolean = false, groupTimers: Timer[] = []) => {
@@ -275,33 +253,6 @@ export function TimerList({ projects }: { projects: Project[] }) {
     }
   };
 
-  const parseDurationInput = (input: string): number | undefined => {
-    // Remove any whitespace
-    input = input.trim();
-    
-    // Handle "2" or "2.5" format (hours)
-    if (/^\d+(\.\d+)?$/.test(input)) {
-      const hours = parseFloat(input);
-      return Math.round(hours * 60);
-    }
-    
-    // Handle "2:30" format
-    if (/^\d+:\d{1,2}$/.test(input)) {
-      const [hours, minutes] = input.split(':').map(Number);
-      return (hours * 60) + minutes;
-    }
-    
-    // Handle "230" format (2 hours 30 minutes)
-    if (/^\d{3,4}$/.test(input)) {
-      const hours = parseInt(input.slice(0, -2));
-      const minutes = parseInt(input.slice(-2));
-      if (minutes < 60) {
-        return (hours * 60) + minutes;
-      }
-    }
-    
-    return undefined;
-  };
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>, timer: Timer) => {
     const newDuration = e.target.value;
     setEditedDuration(newDuration);
@@ -327,30 +278,13 @@ export function TimerList({ projects }: { projects: Project[] }) {
     }
 
     try {
-      // Only update duration and end time if timer is stopped
-      if (timer.endTime) {
-        if (timer.startTime) {
-          // If timer is stopped and has start time, update end time based on duration
-          const startDate = new Date(timer.startTime);
-          const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
-          await handleTimeUpdate(timer.id, false, [], {
-            duration: durationMinutes,
-            endTime: endDate
-          });
-        } else {
-          // If timer is stopped but no start time, just update duration
-          await handleTimeUpdate(timer.id, false, [], { 
-            duration: durationMinutes 
-          });
-        }
-      } else {
-        // If timer is running, just update duration without affecting times
-        await handleTimeUpdate(timer.id, false, [], { 
-          duration: durationMinutes 
-        });
-      }
+      await updateTimerDuration(timer, durationMinutes);
+      
+      // Refresh timer list
+      const { groupedTimers } = await getTimers(currentPage);
+      setTimers(groupedTimers);
 
-      // Only clear states after successful update
+      // Clear states after successful update
       setEditingTimerId(null);
       setCurrentEditingTimer(null);
       setEditedDuration("");

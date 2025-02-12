@@ -259,14 +259,14 @@ export function TimeTracker() {
                   updateProject(project)
                 }}
               />
-              <TagMenu
+              {/* <TagMenu
                 tags={tags}
                 selectedTag={selectedTag}
                 onSelectTag={(tag) => {
                   setSelectedTag(tag)
                   updateTag(tag)
                 }}
-              />
+              /> */}
               <div className="relative">
                 <div
                   className="flex items-center space-x-2 cursor-pointer"
