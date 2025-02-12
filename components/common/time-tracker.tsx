@@ -34,41 +34,78 @@ export function TimeTracker() {
   const [manualStartTimeInput, setManualStartTimeInput] = useState<string>("")
   const [hasTimers, setHasTimers] = useState(false)
 
+  // This function updates the start time locally and recalculates the duration.
+  // It does NOT update the start time in the database.
+  const updateStartTime = (input: string) => {
+    const timeInput = input.replace(":", "").trim();
+  
+    if (!/^\d{1,4}$/.test(timeInput)) {
+      return; // Ignore invalid input
+    }
+  
+    let hours = 0, minutes = 0;
+  
+    if (timeInput.length === 4) {
+      hours = Number(timeInput.substring(0, 2));
+      minutes = Number(timeInput.substring(2, 4));
+    } else if (timeInput.length === 3) {
+      hours = Number(timeInput.substring(0, 1));
+      minutes = Number(timeInput.substring(1, 3));
+    } else if (timeInput.length === 2) {
+      if (Number(timeInput) < 24) {
+        hours = Number(timeInput);
+      } else {
+        hours = Number(timeInput.substring(0, 1));
+        minutes = Number(timeInput.substring(1, 2)) * 10;
+      }
+    } else if (timeInput.length === 1) {
+      hours = Number(timeInput);
+    }
+  
+    if (hours > 23 || minutes > 59) return; // Ignore invalid time
+  
+    const updatedStartTime = new Date();
+    updatedStartTime.setHours(hours, minutes, 0, 0);
+  
+    setTimerStart(updatedStartTime.getTime());
+    setStartTime(updatedStartTime.toISOString());
+  
+    // Recalculate duration
+    const durationInSeconds = Math.floor((Date.now() - updatedStartTime.getTime()) / 1000);
+    setDuration(formatDuration(durationInSeconds));
+    //update db
+    if (isTracking && currentTimerId) {
+      updateOnStopTimer({
+        id: Number.parseInt(currentTimerId),
+        startTime: updatedStartTime,
+      }).then(() => {
+        toast({ title: "Success", description: "Timer updated successfully" });
+      });
+    }
+  };
+  
   const handleManualStartTimeBlur = () => {
-    setIsManualStartTime(false) // Resume interval updates
-    updateStartTime(manualStartTimeInput)
-  }
+    if (manualStartTimeInput.trim() !== "") {
+      updateStartTime(manualStartTimeInput);
+    }
+    setIsManualStartTime(false);
+  };
+  
+  const handleManualStartTimeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (manualStartTimeInput.trim() !== "") {
+        updateStartTime(manualStartTimeInput);
+      }
+      setIsManualStartTime(false);
+      e.currentTarget.blur();
+    }
+  };
+  
+
 
   const handleManualStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsManualStartTime(true) // Pause interval updates temporarily
     setManualStartTimeInput(e.target.value)
-  }
-
-  const updateStartTime = (input: string) => {
-    let timeInput = input.replace(":", "")
-    let hours = 0
-    let minutes = 0
-
-    if (timeInput.length === 4) {
-      hours = Number.parseInt(timeInput.substring(0, 2), 10)
-      minutes = Number.parseInt(timeInput.substring(2, 4), 10)
-    } else if (timeInput.length === 3) {
-      hours = Number.parseInt(timeInput.substring(0, 1), 10)
-      minutes = Number.parseInt(timeInput.substring(1, 3), 10)
-    } else if (timeInput.length === 2) {
-      hours = Number.parseInt(timeInput.substring(0, 2), 10)
-    } else if (timeInput.length === 1) {
-      hours = Number.parseInt(timeInput.substring(0, 1), 10)
-    }
-
-    const updatedStartTime = new Date(timerStart || Date.now())
-    updatedStartTime.setHours(hours, minutes)
-
-    setTimerStart(updatedStartTime.getTime())
-    setStartTime(updatedStartTime.toISOString())
-
-    const durationInSeconds = Math.floor((Date.now() - updatedStartTime.getTime()) / 1000)
-    setDuration(formatDuration(durationInSeconds))
   }
 
   const handleStartStop = () => {
@@ -124,7 +161,7 @@ export function TimeTracker() {
         id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
         endTime: now,
         duration: isManualMode ? undefined : Number.parseInt(duration),
-      }).then((data) => {
+      }).then(() => {
         toast({ title: "Success", description: "Timer stopped successfully" })
         setIsTracking(false)
         setCurrentTimerId(null)
@@ -138,20 +175,22 @@ export function TimeTracker() {
       })
     }
   }
+
   const updateProject = (projectId: string) => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
+        id: Number.parseInt(currentTimerId),
         projectId: Number.parseInt(projectId),
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" })
       })
     }
   }
+
   const updateTag = (tagId: string) => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
+        id: Number.parseInt(currentTimerId),
         tagId: Number.parseInt(tagId),
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" })
@@ -220,28 +259,24 @@ export function TimeTracker() {
       }
 
       // Check for any existing timers
-      const { groupedTimers, totalCount } = await getTimers(0)
-      if (groupedTimers && groupedTimers.length > 0) {
-        setHasTimers(true)
-      } else {
-        setHasTimers(false)
-      }
+      const { groupedTimers } = await getTimers(0)
+      setHasTimers(!!(groupedTimers && groupedTimers.length > 0))
     }
     
     checkTimers()
 
-    let interval: NodeJS.Timeout
+    let interval: NodeJS.Timeout;
 
     if (isTracking && !isManualMode && !isManualStartTime) {
       interval = setInterval(() => {
-        const now = Date.now()
-        const start = timerStart || now
-        const durationInSeconds = Math.floor((now - start) / 1000)
-        setDuration(formatDuration(durationInSeconds))
-      }, 1000)
+        const now = Date.now();
+        const start = timerStart || now;
+        const durationInSeconds = Math.floor((now - start) / 1000);
+        setDuration(formatDuration(durationInSeconds));
+      }, 1000);
     }
 
-    return () => clearInterval(interval)
+    return () => clearInterval(interval);
   }, [isTracking, isManualMode, timerStart, isManualStartTime])
 
   useEffect(() => {
@@ -305,6 +340,13 @@ export function TimeTracker() {
                         value={manualStartTimeInput}
                         onChange={handleManualStartTimeChange}
                         onBlur={handleManualStartTimeBlur}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            updateStartTime(manualStartTimeInput)
+                            setIsManualStartTime(false)
+                            e.currentTarget.blur()
+                          }
+                        }}
                         className="w-full px-4 py-2 text-sm"
                       />
                     </div>
@@ -327,4 +369,3 @@ export function TimeTracker() {
     </div>
   )
 }
-
