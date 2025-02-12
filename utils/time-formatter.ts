@@ -1,7 +1,33 @@
 // New file for time formatting utilities
 export const validateAndFormatTime = (timeString: string): string | null => {
-  // Move from existing utils/time.ts if it exists, or implement here
-  // ... existing validation logic
+  // Remove any whitespace
+  timeString = timeString.trim();
+
+  // Handle empty string
+  if (!timeString) {
+    return null;
+  }
+
+  // Handle "HH:MM" format
+  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes < 60) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+    return null;
+  }
+
+  // Handle "HHMM" format
+  if (/^\d{4}$/.test(timeString)) {
+    const hours = parseInt(timeString.slice(0, 2));
+    const minutes = parseInt(timeString.slice(2));
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes < 60) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+    return null;
+  }
+
+  return null;
 };
 
 export const parseDurationInput = (input: string): number | undefined => {
@@ -42,3 +68,4 @@ export const formatTimeInput = (timeString: string): string => {
   }
   return timeString;
 }; 
+

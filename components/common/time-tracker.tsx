@@ -31,24 +31,43 @@ export function TimeTracker() {
   const [currentTimerId, setCurrentTimerId] = useState<string | null>(null)
   const [isStartTimeMenuOpen, setIsStartTimeMenuOpen] = useState(false)
   const [isManualStartTime, setIsManualStartTime] = useState(false)
+  const [manualStartTimeInput, setManualStartTimeInput] = useState<string>("")
   const [hasTimers, setHasTimers] = useState(false)
+
   const handleManualStartTimeBlur = () => {
     setIsManualStartTime(false) // Resume interval updates
+    updateStartTime(manualStartTimeInput)
   }
 
   const handleManualStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsManualStartTime(true) // Pause interval updates temporarily
+    setManualStartTimeInput(e.target.value)
+  }
 
-    const [hours, minutes] = e.target.value.split(":")
+  const updateStartTime = (input: string) => {
+    let timeInput = input.replace(":", "")
+    let hours = 0
+    let minutes = 0
+
+    if (timeInput.length === 4) {
+      hours = Number.parseInt(timeInput.substring(0, 2), 10)
+      minutes = Number.parseInt(timeInput.substring(2, 4), 10)
+    } else if (timeInput.length === 3) {
+      hours = Number.parseInt(timeInput.substring(0, 1), 10)
+      minutes = Number.parseInt(timeInput.substring(1, 3), 10)
+    } else if (timeInput.length === 2) {
+      hours = Number.parseInt(timeInput.substring(0, 2), 10)
+    } else if (timeInput.length === 1) {
+      hours = Number.parseInt(timeInput.substring(0, 1), 10)
+    }
+
     const updatedStartTime = new Date(timerStart || Date.now())
-    updatedStartTime.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10))
+    updatedStartTime.setHours(hours, minutes)
 
     setTimerStart(updatedStartTime.getTime())
     setStartTime(updatedStartTime.toISOString())
-    console.log(updatedStartTime, "TEST")
 
     const durationInSeconds = Math.floor((Date.now() - updatedStartTime.getTime()) / 1000)
-    console.log(duration)
     setDuration(formatDuration(durationInSeconds))
   }
 
@@ -283,8 +302,7 @@ export function TimeTracker() {
                   >
                     <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                       <Input
-                        type="time"
-                        value={startTime ? startTime.split("T")[1].substring(0, 5) : ""}
+                        value={manualStartTimeInput}
                         onChange={handleManualStartTimeChange}
                         onBlur={handleManualStartTimeBlur}
                         className="w-full px-4 py-2 text-sm"
