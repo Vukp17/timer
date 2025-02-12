@@ -25,6 +25,8 @@ export function TimerList({ projects }: { projects: Project[] }) {
   const [currentEditingTimer, setCurrentEditingTimer] = useState<Timer | null>(null);
   const [editedStartTimeString, setEditedStartTimeString] = useState<string>("");
   const [editedEndTimeString, setEditedEndTimeString] = useState<string>("");
+  const [displayStartTime, setDisplayStartTime] = useState<string>("");
+  const [displayEndTime, setDisplayEndTime] = useState<string>("");
 
   const debouncedSave = useCallback(
     debounce(async (timer: Timer, description: string) => {
@@ -106,7 +108,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
         await Promise.all(groupTimers.map(timer => {
           const timerStart = timer.startTime ? new Date(timer.startTime).getTime() + timeShift : null;
           const timerEnd = timer.endTime ? new Date(timer.endTime).getTime() + timeShift : null;
-          
+
           return updateOnStopTimer({
             id: timer.id,
             startTime: timerStart ? new Date(timerStart) : undefined,
@@ -125,7 +127,7 @@ export function TimerList({ projects }: { projects: Project[] }) {
       // Refresh timer list
       const { groupedTimers } = await getTimers(currentPage);
       setTimers(groupedTimers);
-      
+
       toast({
         title: "Success",
         description: "Timer(s) updated successfully",
@@ -273,19 +275,108 @@ export function TimerList({ projects }: { projects: Project[] }) {
     }
   };
 
+  const parseDurationInput = (input: string): number | undefined => {
+    // Remove any whitespace
+    input = input.trim();
+    
+    // Handle "2" or "2.5" format (hours)
+    if (/^\d+(\.\d+)?$/.test(input)) {
+      const hours = parseFloat(input);
+      return Math.round(hours * 60);
+    }
+    
+    // Handle "2:30" format
+    if (/^\d+:\d{1,2}$/.test(input)) {
+      const [hours, minutes] = input.split(':').map(Number);
+      return (hours * 60) + minutes;
+    }
+    
+    // Handle "230" format (2 hours 30 minutes)
+    if (/^\d{3,4}$/.test(input)) {
+      const hours = parseInt(input.slice(0, -2));
+      const minutes = parseInt(input.slice(-2));
+      if (minutes < 60) {
+        return (hours * 60) + minutes;
+      }
+    }
+    
+    return undefined;
+  };
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>, timer: Timer) => {
+    const newDuration = e.target.value;
+    setEditedDuration(newDuration);
+    setCurrentEditingTimer(timer);
+    setEditingTimerId(timer.id);
+  };
+
+  const handleDurationBlur = async (timer: Timer) => {
+    if (!editedDuration) {
+      setEditedDuration("");
+      return;
+    }
+
+    const durationMinutes = parseDurationInput(editedDuration);
+    if (durationMinutes === undefined) {
+      setEditedDuration("");
+      toast({
+        title: "Invalid duration format",
+        description: "Please use formats like: 2, 2:30, 230, or 2.5",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Only update duration and end time if timer is stopped
+      if (timer.endTime) {
+        if (timer.startTime) {
+          // If timer is stopped and has start time, update end time based on duration
+          const startDate = new Date(timer.startTime);
+          const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+          await handleTimeUpdate(timer.id, false, [], {
+            duration: durationMinutes,
+            endTime: endDate
+          });
+        } else {
+          // If timer is stopped but no start time, just update duration
+          await handleTimeUpdate(timer.id, false, [], { 
+            duration: durationMinutes 
+          });
+        }
+      } else {
+        // If timer is running, just update duration without affecting times
+        await handleTimeUpdate(timer.id, false, [], { 
+          duration: durationMinutes 
+        });
+      }
+
+      // Only clear states after successful update
+      setEditingTimerId(null);
+      setCurrentEditingTimer(null);
+      setEditedDuration("");
+    } catch (error) {
+      console.error('Failed to update duration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update duration",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderTimer = (timer: Timer | Timer[], isGrouped: boolean = false) => {
     const firstTimer = Array.isArray(timer) ? timer[0] : timer;
     const groupTimers = Array.isArray(timer) ? timer : [timer];
-    
+
     // Calculate total duration for grouped timers
     const totalDuration = groupTimers.reduce((sum, t) => sum + (t.duration || 0), 0);
-    
+
     // For grouped timers, find latest start time and oldest end time
     let groupStartTime = "";
     let groupEndTime = "";
     if (isGrouped && groupTimers.length > 0) {
       // Find latest start time
-      const latestStart = new Date(Math.max(...groupTimers.map(t => 
+      const latestStart = new Date(Math.max(...groupTimers.map(t =>
         t.startTime ? new Date(t.startTime).getTime() : 0
       )));
       groupStartTime = latestStart.toTimeString().slice(0, 8);
@@ -308,11 +399,11 @@ export function TimerList({ projects }: { projects: Project[] }) {
               description: description,
             })
           ));
-          
+
           // Refresh the timer list
           const { groupedTimers } = await getTimers(currentPage);
           setTimers(groupedTimers);
-          
+
           toast({
             title: "Success",
             description: "All timers in group updated successfully",
@@ -336,11 +427,11 @@ export function TimerList({ projects }: { projects: Project[] }) {
               projectId: Number(projectId),
             })
           ));
-          
+
           // Refresh the timer list
           const { groupedTimers } = await getTimers(currentPage);
           setTimers(groupedTimers);
-          
+
           toast({
             title: "Success",
             description: "Project updated for all timers in group",
@@ -357,59 +448,80 @@ export function TimerList({ projects }: { projects: Project[] }) {
 
     const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>, timer: Timer) => {
       if (isGrouped) return;
-      
+
       let newStartTime = e.target.value;
-      setEditedStartTimeString(newStartTime); // Update immediately for display
+      setEditedStartTimeString(newStartTime);
+      setDisplayStartTime(newStartTime);
+      setCurrentEditingTimer(timer);
       setEditingTimerId(timer.id);
     };
 
-    const handleStartTimeBlur = (timer: Timer) => {
-      if (!editedStartTimeString) return;
+    const handleStartTimeBlur = async (timer: Timer) => {
+      if (!editedStartTimeString) {
+        setDisplayStartTime("");
+        setEditedStartTimeString("");
+        return;
+      }
 
       // Handle different time formats
       let formattedTime = editedStartTimeString;
       if (editedStartTimeString.length <= 2) {
-        // Handle hour only input (e.g., "12" -> "12:00")
         formattedTime = `${editedStartTimeString.padStart(2, '0')}:00`;
       } else if (editedStartTimeString.length === 3 || editedStartTimeString.length === 4) {
-        // Handle HHMM format (e.g., "1230" -> "12:30")
         const hour = editedStartTimeString.slice(0, -2).padStart(2, '0');
         const minute = editedStartTimeString.slice(-2);
         formattedTime = `${hour}:${minute}`;
       }
 
       const validTime = validateAndFormatTime(formattedTime);
-      if (!validTime) return;
-
-      const startDate = combineDateAndTime(
-        new Date(timer.startTime || Date.now()),
-        validTime
-      );
-
-      // If we have duration, update end time based on new start time
-      if (timer.duration) {
-        const endDate = new Date(startDate.getTime() + timer.duration * 60000);
-        handleTimeUpdate(timer.id, false, [], { 
-          startTime: startDate,
-          endTime: endDate
-        });
-      } else {
-        handleTimeUpdate(timer.id, false, [], { startTime: startDate });
+      if (!validTime) {
+        setDisplayStartTime("");
+        setEditedStartTimeString("");
+        return;
       }
 
-      setEditingTimerId(null);
+      try {
+        const startDate = combineDateAndTime(
+          new Date(timer.startTime || Date.now()),
+          validTime
+        );
+
+        // If we have duration, update end time based on new start time
+        if (timer.duration) {
+          const endDate = new Date(startDate.getTime() + timer.duration * 60000);
+          await handleTimeUpdate(timer.id, false, [], {
+            startTime: startDate,
+            endTime: endDate
+          });
+        } else {
+          await handleTimeUpdate(timer.id, false, [], { startTime: startDate });
+        }
+
+        // Clear states only after successful update
+        setEditingTimerId(null);
+        setCurrentEditingTimer(null);
+        setEditedStartTimeString("");
+        setDisplayStartTime("");
+      } catch (error) {
+        console.error('Failed to update start time:', error);
+      }
     };
 
     const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>, timer: Timer) => {
       if (isGrouped) return;
-      
+
       let newEndTime = e.target.value;
       setEditedEndTimeString(newEndTime);
+      setDisplayEndTime(newEndTime);
+      setCurrentEditingTimer(timer);
       setEditingTimerId(timer.id);
     };
 
-    const handleEndTimeBlur = (timer: Timer) => {
-      if (!editedEndTimeString) return;
+    const handleEndTimeBlur = async (timer: Timer) => {
+      if (!editedEndTimeString) {
+        setDisplayEndTime("");
+        return;
+      }
 
       // Handle different time formats
       let formattedTime = editedEndTimeString;
@@ -422,69 +534,55 @@ export function TimerList({ projects }: { projects: Project[] }) {
       }
 
       const validTime = validateAndFormatTime(formattedTime);
-      if (!validTime) return;
+      if (!validTime) {
+        setDisplayEndTime("");
+        return;
+      }
 
       const endDate = combineDateAndTime(
         new Date(timer.endTime || Date.now()),
         validTime
       );
 
-      // Calculate new duration if we have a start time
-      if (timer.startTime) {
-        const durationInMinutes = Math.floor(
-          (endDate.getTime() - new Date(timer.startTime).getTime()) / 60000
-        );
-        handleTimeUpdate(timer.id, false, [], { 
-          endTime: endDate,
-          duration: durationInMinutes
-        });
-      } else {
-        handleTimeUpdate(timer.id, false, [], { endTime: endDate });
+      try {
+        // Calculate new duration if we have a start time
+        if (timer.startTime) {
+          const durationInMinutes = Math.floor(
+            (endDate.getTime() - new Date(timer.startTime).getTime()) / 60000
+          );
+          await handleTimeUpdate(timer.id, false, [], {
+            endTime: endDate,
+            duration: durationInMinutes
+          });
+        } else {
+          await handleTimeUpdate(timer.id, false, [], { endTime: endDate });
+        }
+
+        // Only clear the display values after successful update
+        setEditingTimerId(null);
+        setCurrentEditingTimer(null);
+        setEditedEndTimeString("");
+        setDisplayEndTime("");
+      } catch (error) {
+        // In case of error, maintain the display value
+        console.error('Failed to update end time:', error);
       }
-
-      setEditingTimerId(null);
-    };
-
-    const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>, timer: Timer) => {
-      if (isGrouped) return;
-
-      setEditedDuration(e.target.value);
-      setEditingTimerId(timer.id);
-    };
-
-    const handleDurationBlur = (timer: Timer) => {
-      if (!editedDuration) return;
-
-      const durationMinutes = convertDurationToMinutes(editedDuration);
-      if (durationMinutes === undefined) return;
-
-      // If we have a start time, update end time based on new duration
-      if (timer.startTime) {
-        const startDate = new Date(timer.startTime);
-        const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
-        handleTimeUpdate(timer.id, false, [], { 
-          duration: durationMinutes,
-          endTime: endDate
-        });
-      } else {
-        handleTimeUpdate(timer.id, false, [], { duration: durationMinutes });
-      }
-
-      setEditingTimerId(null);
     };
 
     return (
       <div key={firstTimer.id} className="flex items-center gap-4 flex-wrap mb-2">
         <Input
-          value={currentEditingTimer?.id === firstTimer.id ? editedDescription : firstTimer.description ?? ""}
+          value={
+            currentEditingTimer?.id === firstTimer.id && editedDescription !== ""
+              ? editedDescription
+              : firstTimer.description ?? ""
+          }
           onChange={(e) => {
             setEditedDescription(e.target.value);
             setCurrentEditingTimer(firstTimer);
             if (isGrouped) {
-              // For grouped timers, update all timers in the group
               handleGroupDescriptionChange(e.target.value);
             } else {
-              // For single timer, use existing debounced save
               debouncedSave(firstTimer, e.target.value);
             }
           }}
@@ -493,7 +591,6 @@ export function TimerList({ projects }: { projects: Project[] }) {
             setEditedDescription(firstTimer.description ?? "");
           }}
           onBlur={() => {
-            setCurrentEditingTimer(null);
             if (!isGrouped) {
               handleBlur(firstTimer.id, isGrouped, groupTimers);
             }
@@ -506,17 +603,13 @@ export function TimerList({ projects }: { projects: Project[] }) {
           selectedProject={
             isGrouped
               ? String(firstTimer.project?.id)
-              : editingTimerId === firstTimer.id
-                ? String(editedProjectId)
-                : String(firstTimer.project?.id)
+              : String(firstTimer.project?.id)
           }
           onSelectProject={async (projectId) => {
             setEditedProjectId(Number(projectId));
             if (isGrouped) {
-              // For grouped timers, update all timers in the group
               await handleGroupProjectChange(projectId);
             } else {
-              // For single timer, use existing save
               await handleSave(firstTimer.id);
             }
           }}
@@ -524,15 +617,24 @@ export function TimerList({ projects }: { projects: Project[] }) {
         <Input
           type="text"
           value={
-            isGrouped 
-              ? groupStartTime 
-              : (editingTimerId === firstTimer.id
-                ? editedStartTimeString
+            isGrouped
+              ? groupStartTime
+              : (editingTimerId === firstTimer.id && displayStartTime !== "")
+                ? displayStartTime
                 : firstTimer.startTime
                   ? new Date(firstTimer.startTime).toTimeString().slice(0, 8)
-                  : "")
+                  : ""
           }
           onChange={(e) => handleStartTimeChange(e, firstTimer)}
+          onFocus={(e) => {
+            const currentValue = firstTimer.startTime
+              ? new Date(firstTimer.startTime).toTimeString().slice(0, 8)
+              : "";
+            setDisplayStartTime(currentValue);
+            setEditedStartTimeString(currentValue);
+            setCurrentEditingTimer(firstTimer);
+            setEditingTimerId(firstTimer.id);
+          }}
           onBlur={() => handleStartTimeBlur(firstTimer)}
           disabled={isGrouped}
           placeholder="00:00:00"
@@ -544,26 +646,48 @@ export function TimerList({ projects }: { projects: Project[] }) {
           value={
             isGrouped
               ? groupEndTime
-              : (editingTimerId === firstTimer.id 
-                ? editedEndTimeString 
-                : (firstTimer.endTime 
-                  ? new Date(firstTimer.endTime).toTimeString().slice(0, 8) 
-                  : ""))
+              : (editingTimerId === firstTimer.id && displayEndTime !== "")
+                ? displayEndTime
+                : firstTimer.endTime
+                  ? new Date(firstTimer.endTime).toTimeString().slice(0, 8)
+                  : ""
           }
           onChange={(e) => handleEndTimeChange(e, firstTimer)}
+          onFocus={(e) => {
+            const currentValue = firstTimer.endTime
+              ? new Date(firstTimer.endTime).toTimeString().slice(0, 8)
+              : "";
+            setDisplayEndTime(currentValue);
+            setEditedEndTimeString(currentValue);
+            setCurrentEditingTimer(firstTimer);
+            setEditingTimerId(firstTimer.id);
+          }}
           onBlur={() => handleEndTimeBlur(firstTimer)}
           disabled={isGrouped}
           placeholder="00:00:00"
           className="flex-1 min-w-[150px]"
         />
-        
+
         <Input
           type="text"
-          value={convertMinutesToDuration(totalDuration)}
+          value={
+            editingTimerId === firstTimer.id && editedDuration !== ""
+              ? editedDuration
+              : convertMinutesToDuration(isGrouped ? totalDuration : (firstTimer.duration || 0))
+          }
           onChange={(e) => handleDurationChange(e, firstTimer)}
+          onFocus={(e) => {
+            const currentValue = firstTimer.duration
+              ? convertMinutesToDuration(firstTimer.duration)
+              : "";
+            setEditedDuration(currentValue);
+            setCurrentEditingTimer(firstTimer);
+            setEditingTimerId(firstTimer.id);
+          }}
           onBlur={() => handleDurationBlur(firstTimer)}
           disabled={isGrouped}
           className="flex-1 min-w-[150px]"
+          placeholder="2, 2:30, 230, 2.5"
         />
 
         {isGrouped ? (

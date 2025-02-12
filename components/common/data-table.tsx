@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { MoreHorizontal, Search, ArrowUp, ArrowDown } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { MoreHorizontal, Search, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,12 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
   const page = Number(searchParams.get('page') || '1')
   const pageSize = 10
   const search = searchParams.get('search') || ''
+
+  const [editingCell, setEditingCell] = useState<{ row: number; column: string } | null>(null)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null)
+  const resizeStartX = useRef<number>(0)
+  const initialWidth = useRef<number>(0)
 
   useEffect(() => {
     let filtered = data.filter((item) =>
@@ -103,6 +109,45 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
     }
   }
 
+  // Handle column resize
+  const handleResizeStart = (e: React.MouseEvent, columnKey: string) => {
+    e.preventDefault()
+    setResizingColumn(columnKey)
+    resizeStartX.current = e.clientX
+    initialWidth.current = columnWidths[columnKey] || 200
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizingColumn) {
+        const diff = e.clientX - resizeStartX.current
+        setColumnWidths(prev => ({
+          ...prev,
+          [columnKey]: Math.max(100, initialWidth.current + diff)
+        }))
+      }
+    }
+
+    const handleMouseUp = () => {
+      setResizingColumn(null)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
+  // Handle cell double click for editing
+  const handleCellDoubleClick = (rowIndex: number, columnKey: string) => {
+    setEditingCell({ row: rowIndex, column: columnKey })
+  }
+
+  // Handle cell edit save
+  const handleCellEdit = (value: string, rowIndex: number, columnKey: string) => {
+    const updatedItem = { ...data[rowIndex], [columnKey]: value }
+    onEdit(updatedItem as T)
+    setEditingCell(null)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
@@ -115,55 +160,86 @@ export function DataTable<T>({ data, columns, onEdit, onDelete, onSearch, onSort
           onChange={(e) => handleSearch(e.target.value)}
         />
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead
-                key={String(column.accessorKey)}
-                onClick={() =>
-                  handleSort(column.accessorKey, column.sortField) // Pass `sortField` explicitly for function accessors
-                }
-                className="cursor-pointer"
-              >
-                {column.header}
-                {sortColumn === column.sortField && (
-                  sortOrder === 'asc' ? <ArrowUp className="inline-block ml-2" /> : <ArrowDown className="inline-block ml-2" />
-                )}
-              </TableHead>
-            ))}
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedData.map((item, index) => (
-            <TableRow key={index}>
+      <div className="relative overflow-x-auto" style={{ height: 'calc(100vh - 300px)' }}>
+        <Table>
+          <TableHeader className="sticky top-0 bg-background z-10">
+            <TableRow>
               {columns.map((column) => (
-                <TableCell key={column.accessorKey as string}>
-                  {typeof column.accessorKey === 'function'
-                    ? column.accessorKey(item) // Invoke the accessor function
-                    : String(item[column.accessorKey as keyof T])}
-                </TableCell>
+                <TableHead
+                  key={String(column.accessorKey)}
+                  style={{ width: columnWidths[String(column.accessorKey)] || 200 }}
+                  className="relative group"
+                >
+                  <div className="flex items-center">
+                    <span
+                      className="cursor-pointer flex-1"
+                      onClick={() => handleSort(column.accessorKey, column.sortField)}
+                    >
+                      {column.header}
+                      {sortColumn === column.sortField && (
+                        sortOrder === 'asc' ? <ArrowUp className="inline-block ml-2" /> : <ArrowDown className="inline-block ml-2" />
+                      )}
+                    </span>
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-primary/50"
+                      onMouseDown={(e) => handleResizeStart(e, String(column.accessorKey))}
+                    >
+                      <GripVertical className="h-4 w-4 absolute -right-1 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+                </TableHead>
               ))}
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onEdit(item)}>Edit</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDelete(item)}>Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+              <TableHead className="sticky right-0 bg-background w-[100px]">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item, rowIndex) => (
+              <TableRow key={rowIndex} className="group/row hover:bg-muted/50">
+                {columns.map((column) => (
+                  <TableCell
+                    key={String(column.accessorKey)}
+                    className="relative"
+                    onDoubleClick={() => handleCellDoubleClick(rowIndex, String(column.accessorKey))}
+                  >
+                    {editingCell?.row === rowIndex && editingCell?.column === String(column.accessorKey) ? (
+                      <Input
+                        autoFocus
+                        defaultValue={String(typeof column.accessorKey === 'function' ? column.accessorKey(item) : item[column.accessorKey as keyof T])}
+                        onBlur={(e) => handleCellEdit(e.target.value, rowIndex, String(column.accessorKey))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleCellEdit((e.target as HTMLInputElement).value, rowIndex, String(column.accessorKey))
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="block w-full overflow-hidden text-ellipsis">
+                        {typeof column.accessorKey === 'function'
+                          ? column.accessorKey(item)
+                          : String(item[column.accessorKey as keyof T])}
+                      </span>
+                    )}
+                  </TableCell>
+                ))}
+                <TableCell className="sticky right-0 bg-background">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover/row:opacity-100">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => onEdit(item)}>Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDelete(item)}>Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       <div className="mx-auto flex w-full justify-end">
         <Pagination>
           <PaginationContent>

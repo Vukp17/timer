@@ -1,6 +1,3 @@
-
-
-
 'use client'
 
 import { SetStateAction, useEffect, useState } from 'react'
@@ -20,10 +17,30 @@ import { PersonIcon } from '@radix-ui/react-icons'
 
 
 const clientColumns: Column<Client>[] = [
-    { header: 'Name', accessorKey: 'name' },
-    { header: 'Email', accessorKey: 'email' },
-    { header: 'Phone', accessorKey: 'phone' },
-    { header: 'Address', accessorKey: 'address' },
+    { 
+      header: 'Name', 
+      accessorKey: 'name', 
+      editable: true,
+      type: 'text'
+    },
+    { 
+      header: 'Email', 
+      accessorKey: 'email', 
+      editable: true,
+      type: 'text'
+    },
+    { 
+      header: 'Phone', 
+      accessorKey: 'phone', 
+      editable: true,
+      type: 'text'
+    },
+    { 
+      header: 'Address', 
+      accessorKey: 'address', 
+      editable: true,
+      type: 'text'
+    },
 ]
 
 const clientFields = [
@@ -178,7 +195,11 @@ return (
             onSearch={handleSearch}
             onSort={handleSort}
             onPageChange={handlePageChange}
-
+            onCellUpdate={async (item, field, value) => {
+                const updatedClient = { ...item, [field]: value }
+                await update(updatedClient)
+                setClients(clients.map(c => c.id === item.id ? updatedClient : c))
+            }}
         />
         ) : (
             <EmptyStateModular
