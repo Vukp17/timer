@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { DollarSign, Play, Square } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import type { Tag } from "@/app/models/tag"
 import { createStart, updateOnStopTimer, getRunningTimer, getTimers } from "@/app/actions/timer"
 import { toast } from "../ui/use-toast"
 import { EmptyState } from "./empty-states/empty-state-timer"
+import type { TimerListHandle } from "./timer-list"
 
 export function TimeTracker() {
   const [description, setDescription] = useState("")
@@ -33,6 +34,8 @@ export function TimeTracker() {
   const [isManualStartTime, setIsManualStartTime] = useState(false)
   const [manualStartTimeInput, setManualStartTimeInput] = useState<string>("")
   const [hasTimers, setHasTimers] = useState(false)
+
+  const timerListRef = useRef<TimerListHandle>(null)
 
   const formatTimeForInput = (date: Date) => {
     const hours = date.getHours().toString().padStart(2, '0');
@@ -191,6 +194,8 @@ export function TimeTracker() {
         setStartTime(null)
         setEndTime(null)
         setDuration("")
+        // Refresh the timer list
+        timerListRef.current?.refreshTimers();
       })
     }
   }
@@ -386,7 +391,14 @@ export function TimeTracker() {
         </CardContent>
       </Card>
 
-      {hasTimers ? <TimerList projects={projects} /> : <EmptyState />}
+      {hasTimers ? (
+        <TimerList 
+          ref={timerListRef}
+          projects={projects} 
+        />
+      ) : (
+        <EmptyState />
+      )}
     </div>
   )
 }
