@@ -34,11 +34,19 @@ export function TimeTracker() {
   const [manualStartTimeInput, setManualStartTimeInput] = useState<string>("")
   const [hasTimers, setHasTimers] = useState(false)
 
+  const formatTimeForInput = (date: Date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   // This function updates the start time locally and recalculates the duration.
   // It does NOT update the start time in the database.
   const updateStartTime = (input: string) => {
-    const timeInput = input.replace(":", "").trim();
+    // Remove any colons and trim whitespace
+    const timeInput = input.replace(/:/g, "").trim();
   
+    // Basic validation for numeric input
     if (!/^\d{1,4}$/.test(timeInput)) {
       return; // Ignore invalid input
     }
@@ -46,23 +54,32 @@ export function TimeTracker() {
     let hours = 0, minutes = 0;
   
     if (timeInput.length === 4) {
-      hours = Number(timeInput.substring(0, 2));
-      minutes = Number(timeInput.substring(2, 4));
+      // Format: 1230, 0930, etc.
+      hours = parseInt(timeInput.substring(0, 2));
+      minutes = parseInt(timeInput.substring(2, 4));
     } else if (timeInput.length === 3) {
-      hours = Number(timeInput.substring(0, 1));
-      minutes = Number(timeInput.substring(1, 3));
+      // Format: 123 (1:23)
+      hours = parseInt(timeInput.substring(0, 1));
+      minutes = parseInt(timeInput.substring(1, 3));
     } else if (timeInput.length === 2) {
-      if (Number(timeInput) < 24) {
-        hours = Number(timeInput);
+      // Format: 12 (12:00) or 23 (0:23)
+      if (parseInt(timeInput) < 24) {
+        hours = parseInt(timeInput);
+        minutes = 0;
       } else {
-        hours = Number(timeInput.substring(0, 1));
-        minutes = Number(timeInput.substring(1, 2)) * 10;
+        hours = parseInt(timeInput.substring(0, 1));
+        minutes = parseInt(timeInput.substring(1)) * 10;
       }
     } else if (timeInput.length === 1) {
-      hours = Number(timeInput);
+      // Format: 9 (9:00)
+      hours = parseInt(timeInput);
+      minutes = 0;
     }
   
-    if (hours > 23 || minutes > 59) return; // Ignore invalid time
+    // Validate hours and minutes
+    if (hours >= 24 || minutes >= 60) {
+      return; // Invalid time
+    }
   
     const updatedStartTime = new Date();
     updatedStartTime.setHours(hours, minutes, 0, 0);
@@ -76,7 +93,7 @@ export function TimeTracker() {
     //update db
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: Number.parseInt(currentTimerId),
+        id: parseInt(currentTimerId),
         startTime: updatedStartTime,
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" });
@@ -89,6 +106,7 @@ export function TimeTracker() {
       updateStartTime(manualStartTimeInput);
     }
     setIsManualStartTime(false);
+    setIsStartTimeMenuOpen(false);
   };
   
   const handleManualStartTimeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -97,6 +115,7 @@ export function TimeTracker() {
         updateStartTime(manualStartTimeInput);
       }
       setIsManualStartTime(false);
+      setIsStartTimeMenuOpen(false);
       e.currentTarget.blur();
     }
   };
@@ -158,9 +177,9 @@ export function TimeTracker() {
       }
 
       updateOnStopTimer({
-        id: currentTimerId ? Number.parseInt(currentTimerId) : 0,
+        id: currentTimerId ? parseInt(currentTimerId) : 0,
         endTime: now,
-        duration: isManualMode ? undefined : Number.parseInt(duration),
+        duration: isManualMode ? undefined : parseInt(duration),
       }).then(() => {
         toast({ title: "Success", description: "Timer stopped successfully" })
         setIsTracking(false)
@@ -179,7 +198,7 @@ export function TimeTracker() {
   const updateProject = (projectId: string) => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: Number.parseInt(currentTimerId),
+        id: parseInt(currentTimerId),
         projectId: Number.parseInt(projectId),
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" })
@@ -190,7 +209,7 @@ export function TimeTracker() {
   const updateTag = (tagId: string) => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: Number.parseInt(currentTimerId),
+        id: parseInt(currentTimerId),
         tagId: Number.parseInt(tagId),
       }).then(() => {
         toast({ title: "Success", description: "Timer updated successfully" })
@@ -210,8 +229,8 @@ export function TimeTracker() {
   const handleBlurOrProjectChange = () => {
     if (isTracking && currentTimerId) {
       updateOnStopTimer({
-        id: Number.parseInt(currentTimerId),
-        duration: isManualMode ? undefined : Number.parseInt(duration),
+        id: parseInt(currentTimerId),
+        duration: isManualMode ? undefined : parseInt(duration),
         description: description,
         projectId: Number.parseInt(selectedProject),
         tagId: Number.parseInt(selectedTag),
@@ -235,32 +254,34 @@ export function TimeTracker() {
     fetchTags()
 
     const checkTimers = async () => {
-      // First check for running timer
-      const runningTimer = await getRunningTimer()
-      if (runningTimer) {
-        setIsTracking(true)
-        setCurrentTimerId(runningTimer.id.toString())
-        setDescription(runningTimer.description || "")
-        setSelectedProject(runningTimer.projectId ? runningTimer.projectId.toString() : "")
-        setSelectedTag(runningTimer.tagId ? runningTimer.tagId.toString() : "")
-        setHasTimers(true)
+      if (!isTracking) {
+        const runningTimer = await getRunningTimer()
+        if (runningTimer) {
+          setIsTracking(true)
+          setCurrentTimerId(runningTimer.id.toString())
+          setDescription(runningTimer.description || "")
+          setSelectedProject(runningTimer.projectId ? runningTimer.projectId.toString() : "")
+          setSelectedTag(runningTimer.tagId ? runningTimer.tagId.toString() : "")
+          setHasTimers(true)
 
-        if (runningTimer.startTime) {
-          setStartTime(new Date(runningTimer.startTime).toISOString())
-          setTimerStart(new Date(runningTimer.startTime).getTime())
-        }
+          if (runningTimer.startTime) {
+            setStartTime(new Date(runningTimer.startTime).toISOString())
+            setTimerStart(new Date(runningTimer.startTime).getTime())
+          }
 
-        if (!isManualMode) {
-          const now = Date.now()
-          const start = runningTimer.startTime ? new Date(runningTimer.startTime).getTime() : Date.now()
-          const durationInSeconds = Math.floor((now - start) / 1000)
-          setDuration(formatDuration(durationInSeconds))
+          if (!isManualMode) {
+            const now = Date.now()
+            const start = runningTimer.startTime ? new Date(runningTimer.startTime).getTime() : Date.now()
+            const durationInSeconds = Math.floor((now - start) / 1000)
+            setDuration(formatDuration(durationInSeconds))
+          }
         }
       }
 
-      // Check for any existing timers
-      const { groupedTimers } = await getTimers(0)
-      setHasTimers(!!(groupedTimers && groupedTimers.length > 0))
+      if (!hasTimers) {
+        const { groupedTimers } = await getTimers(0)
+        setHasTimers(!!(groupedTimers && groupedTimers.length > 0))
+      }
     }
     
     checkTimers()
@@ -324,7 +345,13 @@ export function TimeTracker() {
               <div className="relative">
                 <div
                   className="flex items-center space-x-2 cursor-pointer"
-                  onClick={() => setIsStartTimeMenuOpen(!isStartTimeMenuOpen)}
+                  onClick={() => {
+                    setIsStartTimeMenuOpen(!isStartTimeMenuOpen);
+                    if (!isStartTimeMenuOpen && startTime) {
+                      const startDate = new Date(startTime);
+                      setManualStartTimeInput(formatTimeForInput(startDate));
+                    }
+                  }}
                 >
                   <div className="w-24 h-10 border rounded-md flex items-center justify-center">
                     {duration || "00:00:00"}
@@ -340,13 +367,7 @@ export function TimeTracker() {
                         value={manualStartTimeInput}
                         onChange={handleManualStartTimeChange}
                         onBlur={handleManualStartTimeBlur}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            updateStartTime(manualStartTimeInput)
-                            setIsManualStartTime(false)
-                            e.currentTarget.blur()
-                          }
-                        }}
+                        onKeyDown={handleManualStartTimeKeyDown}
                         className="w-full px-4 py-2 text-sm"
                       />
                     </div>
