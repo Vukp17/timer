@@ -66,7 +66,6 @@ export function validateAndFormatTime(timeString: string): string | null {
     return null;
 }
 export function combineDateAndTime(date: Date, timeString: string): Date {
-    console.log(timeString,"timeString");
     let timstr = validateAndFormatTime(timeString);
     if (!timstr) {
         throw new Error('Invalid time string');

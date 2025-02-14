@@ -40,3 +40,16 @@ export interface TimerUpdate {
     projectId?: number | null
     tagId?: number | null
 }
+
+//weeekly grouped timers
+export interface WeeklyGroupedTimers {
+  weekStart: string;
+  weekEnd: string;
+  totalHours: number;
+  days: GroupedTimers[];
+}
+
+export interface WeeklyTimerResponse {
+  weeklyTimers: WeeklyGroupedTimers[];
+  totalCount: number;
+}

@@ -1,4 +1,4 @@
-import { TimerCreate, Timer, TimerResponse, TimerUpdate } from "../models/timer";
+import { TimerCreate, Timer, TimerResponse, TimerUpdate, WeeklyTimerResponse } from "../models/timer";
 import api from "@/lib/apiClient";
 
 const VIEW = '/timer';
@@ -65,3 +65,37 @@ export async function getRunningTimer(): Promise<Timer> {
         };
     }
 }
+
+export async function getTimersGroupedByWeek(
+    page: number,
+    pageSize: number,
+    sortOrder: string = 'asc',
+    sortField: string = 'startTime',
+    searchQuery?: string
+): Promise<WeeklyTimerResponse> {
+    const params = {
+        page,
+        pageSize,
+        sortOrder,
+        sortField,
+        ...(searchQuery && { search: searchQuery })
+    };
+    try {
+        
+        const { data } = await api.get<WeeklyTimerResponse>(VIEW + '/weekly', { params });
+        data.weeklyTimers.forEach(week => {
+          week.days.forEach(day => {
+            day.timers.forEach(timer => {
+              timer.startTime = new Date(timer.startTime!); // Convert strings to Dates
+              timer.endTime = new Date(timer.endTime!);
+            });
+          });
+        });
+        return data;
+    } catch (error: any) {
+        console.error('Error fetching timer list:', error.message);
+        throw error;
+    }
+
+}
+

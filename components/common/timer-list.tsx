@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } fro
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getTimers, updateOnStopTimer, } from "@/app/actions/timer";
-import { GroupedTimers, Timer } from "@/app/models/timer";
+import { getTimers, updateOnStopTimer, getTimersGroupedByWeek } from "@/app/actions/timer";
+import { GroupedTimers, Timer, WeeklyGroupedTimers } from "@/app/models/timer";
 import { Project } from "@/app/models/project";
 import { Play, Square, ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon, Trash2 } from 'lucide-react';
 import { ProjectMenu } from "./project-menu";
@@ -14,14 +14,21 @@ import { convertDurationToMinutes, convertMinutesToDuration, combineDateAndTime,
 import { parseDurationInput, formatTimeInput } from "@/utils/time-formatter";
 import { updateTimerTime, updateTimerDuration, startStopTimer } from "@/services/timer-service";
 
+const calculateTotalHours = (timers: Timer[]): string => {
+  const totalMinutes = timers.reduce((sum, timer) => sum + (timer.duration || 0), 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+};
+
 export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
   function TimerList({ projects }, ref) {
-    const [timers, setTimers] = useState<GroupedTimers[]>([]);
+    const [timers, setTimers] = useState<WeeklyGroupedTimers[]>([]);
     const [editingTimerId, setEditingTimerId] = useState<number | null>(null);
     const [editedDescription, setEditedDescription] = useState<string>("");
     const [editedProjectId, setEditedProjectId] = useState<number | null>(null);
     const [editedDuration, setEditedDuration] = useState<string>("");
-    const [currentPage, setCurrentPage] = useState<number>(0); 
+    const [currentPage, setCurrentPage] = useState<number>(0);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const [groupedTimers, setGroupedTimers] = useState<Record<string, (Timer | Timer[])[]>>({});
@@ -39,51 +46,49 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
           description: description,
           startTime: undefined,
         });
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
       }, 500),
       [currentPage]
     );
 
     const refreshTimers = useCallback(async () => {
-      try {
+       try {
         setIsLoading(true);
-        const { groupedTimers, totalCount } = await getTimers(currentPage, undefined, "startTime", "desc");
-        
-        const calculatedTotalPages = Math.ceil(totalCount / 10);
-        setTotalPages(calculatedTotalPages || 1);
-
-        if (currentPage >= calculatedTotalPages && calculatedTotalPages > 0) {
-          setCurrentPage(calculatedTotalPages - 1);
-          return;
+        const res  =  getTimers(currentPage, '', "startTime", "desc", 10);
+        console.log('res', res)
+        const response = await getTimersGroupedByWeek(
+          currentPage,
+          10,
+          "desc",
+          "startTime"
+        );
+        if(response.weeklyTimers.length > 0) {
+          setTimers(response.weeklyTimers);
         }
+        // Set timers even if empty
+        setTimers(response.weeklyTimers);
 
-        const sortedTimers = [...groupedTimers].sort((a, b) => {
-          const dateA = new Date(a.date).getTime();
-          const dateB = new Date(b.date).getTime();
-          if (dateA !== dateB) {
-            return dateB - dateA;
+        // Handle pagination only if there are records
+        if (response.totalCount > 0) {
+          const calculatedTotalPages = Math.ceil(response.totalCount / 10);
+          setTotalPages(calculatedTotalPages);
+
+          if (currentPage >= calculatedTotalPages) {
+            setCurrentPage(calculatedTotalPages - 1);
           }
-          
-          const newestTimeA = Math.max(...a.timers.map(t => 
-            t.startTime ? new Date(t.startTime).getTime() : 0
-          ));
-          const newestTimeB = Math.max(...b.timers.map(t => 
-            t.startTime ? new Date(t.startTime).getTime() : 0
-          ));
-          return newestTimeB - newestTimeA;
-        });
-
-        setTimers(sortedTimers);
-
-        console.log('Debug pagination:', { 
-          totalCount, 
-          calculatedTotalPages, 
-          currentPage, 
-          totalPages 
-        });
+        } else {
+          setTotalPages(1);
+          setCurrentPage(0);
+        }
+      
       } catch (error) {
-        console.error('Error fetching timers:', error);
+        console.error('Error details:', error);
         toast({
           title: "Error",
           description: "Failed to load timers",
@@ -91,7 +96,7 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
         });
       } finally {
         setIsLoading(false);
-      }
+        }
     }, [currentPage]);
 
     useEffect(() => {
@@ -101,51 +106,50 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
     useEffect(() => {
       const grouped: Record<string, (Timer | Timer[])[]> = {};
       
-      const sortedDates = [...timers].sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
+      // No need to sort timers since they're already grouped by week
+      timers.forEach((weekGroup) => {
+        weekGroup.days.forEach(({ date, timers: dateTimers }) => {
+          grouped[date] = [];
+          const groupMap: Record<string, Timer[]> = {};
 
-      sortedDates.forEach(({ date, timers: dateTimers }) => {
-        grouped[date] = [];
-        const groupMap: Record<string, Timer[]> = {};
+          const sortedTimers = [...dateTimers].sort((a, b) => {
+            const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
+            const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
+            return timeB - timeA;
+          });
 
-        const sortedTimers = [...dateTimers].sort((a, b) => {
-          const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
-          const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
-          return timeB - timeA;
-        });
+          sortedTimers.forEach((timer: Timer) => {
+            const key = `${timer.description}-${timer.project?.id || 'no-project'}`;
+            if (!groupMap[key]) {
+              groupMap[key] = [];
+            }
+            groupMap[key].push(timer);
+          });
 
-        sortedTimers.forEach((timer: Timer) => {
-          const key = `${timer.description}-${timer.project?.id || 'no-project'}`;
-          if (!groupMap[key]) {
-            groupMap[key] = [];
-          }
-          groupMap[key].push(timer);
-        });
+          const sortedGroups = Object.values(groupMap).map(group => {
+            return group.sort((a, b) => {
+              const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
+              const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
+              return bTime - aTime;
+            });
+          });
 
-        const sortedGroups = Object.values(groupMap).map(group => {
-          return group.sort((a, b) => {
-            const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
-            const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
-            return bTime - aTime;
+          const sortedEntries = sortedGroups.sort((a, b) => {
+            const aLatestTime = Math.max(...a.map(t => t.startTime ? new Date(t.startTime).getTime() : 0));
+            const bLatestTime = Math.max(...b.map(t => t.startTime ? new Date(t.startTime).getTime() : 0));
+            return bLatestTime - aLatestTime;
+          });
+
+          sortedEntries.forEach(group => {
+            if (group.length > 1) {
+              grouped[date].push(group);
+            } else {
+              grouped[date].push(group[0]);
+            }
           });
         });
-
-        const sortedEntries = sortedGroups.sort((a, b) => {
-          const aLatestTime = Math.max(...a.map(t => t.startTime ? new Date(t.startTime).getTime() : 0));
-          const bLatestTime = Math.max(...b.map(t => t.startTime ? new Date(t.startTime).getTime() : 0));
-          return bLatestTime - aLatestTime;
-        });
-
-        sortedEntries.forEach(group => {
-          if (group.length > 1) {
-            grouped[date].push(group);
-          } else {
-            grouped[date].push(group[0]);
-          }
-        });
       });
-
+      
       setGroupedTimers(grouped);
     }, [timers]);
 
@@ -173,14 +177,19 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
       }
     ) => {
       try {
-        const timer = isGrouped 
+        const timer = isGrouped
           ? groupTimers.find(t => t.id === timerId) || groupTimers[0]
           : { id: timerId };
 
         await updateTimerTime(timer as Timer, updates, isGrouped, groupTimers);
-        
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
 
         toast({
           title: "Success",
@@ -236,8 +245,13 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
         }
 
         setEditingTimerId(null);
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
 
         toast({
           title: "Timer updated",
@@ -278,8 +292,13 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
     const handleStartStop = async (timer: Timer) => {
       try {
         await startStopTimer(timer);
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
       } catch (error) {
         console.error('Failed to start/stop timer:', error);
         toast({
@@ -300,8 +319,13 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
 
     const handleDelete = async (timerId: number, isGrouped: boolean = false, groupTimers: Timer[] = []) => {
       try {
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
 
         toast({
           title: "Timer deleted",
@@ -342,9 +366,14 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
 
       try {
         await updateTimerDuration(timer, durationMinutes);
-        
-        const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-        setTimers(groupedTimers);
+
+        const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+        setTimers(weeklyTimers.map(weekGroup => ({
+          weekStart: weekGroup.weekStart,
+          weekEnd: weekGroup.weekEnd,
+          totalHours: weekGroup.totalHours,
+          days: weekGroup.days
+        })));
 
         setEditingTimerId(null);
         setCurrentEditingTimer(null);
@@ -380,57 +409,63 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
         groupEndTime = oldestEnd.toTimeString().slice(0, 8);
       }
 
-      const handleGroupDescriptionChange = async (description: string) => {
-        if (isGrouped) {
-          try {
-            await Promise.all(groupTimers.map(timer =>
-              updateOnStopTimer({
-                id: timer.id,
-                description: description,
-              })
-            ));
+      const handleGroupDescriptionChange = async (description: string, groupTimers: Timer[]) => {
+        try {
+          await Promise.all(groupTimers.map(timer =>
+            updateOnStopTimer({
+              id: timer.id,
+              description: description,
+            })
+          ));
 
-            const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-            setTimers(groupedTimers);
+          const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+          setTimers(weeklyTimers.map(weekGroup => ({
+            weekStart: weekGroup.weekStart,
+            weekEnd: weekGroup.weekEnd,
+            totalHours: weekGroup.totalHours,
+            days: weekGroup.days
+          })));
 
-            toast({
-              title: "Success",
-              description: "All timers in group updated successfully",
-            });
-          } catch (error) {
-            toast({
-              title: "Error",
-              description: "Failed to update timers in group",
-              variant: "destructive",
-            });
-          }
+          toast({
+            title: "Success",
+            description: "All timers in group updated successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update timers in group",
+            variant: "destructive",
+          });
         }
       };
 
-      const handleGroupProjectChange = async (projectId: string) => {
-        if (isGrouped) {
-          try {
-            await Promise.all(groupTimers.map(timer =>
-              updateOnStopTimer({
-                id: timer.id,
-                projectId: Number(projectId),
-              })
-            ));
+      const handleGroupProjectChange = async (projectId: string, groupTimers: Timer[]) => {
+        try {
+          await Promise.all(groupTimers.map(timer =>
+            updateOnStopTimer({
+              id: timer.id,
+              projectId: Number(projectId),
+            })
+          ));
 
-            const { groupedTimers } = await getTimers(currentPage, undefined, "startTime", "desc");
-            setTimers(groupedTimers);
+          const { weeklyTimers } = await getTimersGroupedByWeek(currentPage, 10, "desc", "startTime");
+          setTimers(weeklyTimers.map(weekGroup => ({
+            weekStart: weekGroup.weekStart,
+            weekEnd: weekGroup.weekEnd,
+            totalHours: weekGroup.totalHours,
+            days: weekGroup.days
+          })));
 
-            toast({
-              title: "Success",
-              description: "Project updated for all timers in group",
-            });
-          } catch (error) {
-            toast({
-              title: "Error",
-              description: "Failed to update project for timers in group",
-              variant: "destructive",
-            });
-          }
+          toast({
+            title: "Success",
+            description: "Project updated for all timers in group",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update project for timers in group",
+            variant: "destructive",
+          });
         }
       };
 
@@ -562,7 +597,7 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
               setEditedDescription(e.target.value);
               setCurrentEditingTimer(firstTimer);
               if (isGrouped) {
-                handleGroupDescriptionChange(e.target.value);
+                handleGroupDescriptionChange(e.target.value, groupTimers);
               } else {
                 debouncedSave(firstTimer, e.target.value);
               }
@@ -589,7 +624,7 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
             onSelectProject={async (projectId) => {
               setEditedProjectId(Number(projectId));
               if (isGrouped) {
-                await handleGroupProjectChange(projectId);
+                await handleGroupProjectChange(projectId, groupTimers);
               } else {
                 await handleSave(firstTimer.id);
               }
@@ -770,25 +805,44 @@ export const TimerList = forwardRef<TimerListHandle, { projects: Project[] }>(
           </div>
         ) : (
           <>
-            {Object.entries(groupedTimers).map(([date, dateEntries]) => (
-              <Card key={date} className="mb-4">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">{date}</h3>
-                  {dateEntries.map((entry, index) => {
-                    const isGrouped = Array.isArray(entry);
-                    return (
-                      <div key={isGrouped ? `group-${index}` : entry.id}>
-                        {renderTimer(entry, isGrouped)}
-                        {isGrouped && expandedGroups.has(`${entry[0].startTime?.toString() || ""}-${entry[0].id}`) && (
-                          <div className="ml-6 mt-2">
-                            {entry.slice(1).map(timer => renderTimer(timer))}
-                          </div>
-                        )}
+            {timers.map((weekGroup: WeeklyGroupedTimers) => (
+              <div key={weekGroup.weekStart} className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">
+                    Week of {new Date(weekGroup.weekStart).toLocaleDateString()}
+                  </h2>
+                  <div className="text-lg font-semibold text-gray-600">
+                    Total: {weekGroup.totalHours}h
+                  </div>
+                </div>
+
+                {weekGroup.days.map((day) => (
+                  <Card key={day.date} className="mb-4">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">{day.date}</h3>
+                        <div className="text-sm text-gray-600">
+                          {calculateTotalHours(day.timers)}
+                        </div>
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+                      {day.timers.map((entry, index) => {
+                        const isGrouped = Array.isArray(entry);
+                        return (
+                          <div key={isGrouped ? `group-${index}` : entry.id}>
+                            {renderTimer(entry, isGrouped)}
+                            {isGrouped &&
+                              expandedGroups.has(`${entry[0].startTime?.toString() || ""}-${entry[0].id}`) && (
+                                <div className="ml-6 mt-2">
+                                  {entry.slice(1).map(timer => renderTimer(timer))}
+                                </div>
+                              )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ))}
             {renderPagination()}
           </>
